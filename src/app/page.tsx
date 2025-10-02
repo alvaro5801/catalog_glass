@@ -22,7 +22,7 @@ export default function Home() {
   const featuredProducts = products.slice(0, 8);
   const categories = [...new Set(products.map((product) => product.category))];
   const categoryIcons: { [key: string]: React.ElementType } = {
-    Copos: CupSoda,
+    Copos: GlassWater,
     Taças: Wine,
     Canecas: Coffee,
     Squeezes: CupSoda,
