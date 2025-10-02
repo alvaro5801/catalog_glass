@@ -1,11 +1,11 @@
 // src/app/layout.tsx
 import type { Metadata } from "next";
-import { Inter } from "next/font/google"; // Usaremos a fonte Inter para um look mais moderno
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { Header } from "../components/header"; // Importe o Header com caminho relativo
-import { Footer } from "../components/footer"; // Importe o Footer com caminho relativo
-
+import { Header } from "../components/header";
+import { Footer } from "../components/footer";
 import { WhatsAppButton } from "../components/whatsapp-button";
+import { PageTransition } from "../components/page-transition"; // 1. Importe o novo componente
 
 const inter = Inter({
   subsets: ["latin"],
@@ -23,10 +23,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={inter.variable}>
+    <html lang="pt-BR" className={`${inter.variable} scroll-smooth`}>
       <body className="min-h-screen flex flex-col font-sans antialiased">
         <Header />
-        <main className="flex-grow">{children}</main>
+        {/* 2. Envolva o conteúdo principal com o componente de transição */}
+        <PageTransition>
+          <main className="flex-grow">{children}</main>
+        </PageTransition>
         <Footer />
         <WhatsAppButton />
       </body>
