@@ -5,6 +5,8 @@ import "./globals.css";
 import { Header } from "../components/header"; // Importe o Header com caminho relativo
 import { Footer } from "../components/footer"; // Importe o Footer com caminho relativo
 
+import { WhatsAppButton } from "../components/whatsapp-button";
+
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
@@ -26,6 +28,7 @@ export default function RootLayout({
         <Header />
         <main className="flex-grow">{children}</main>
         <Footer />
+        <WhatsAppButton />
       </body>
     </html>
   );
