@@ -1,7 +1,9 @@
 // src/components/footer.tsx
 import Link from "next/link";
 import { Button } from "./ui/button";
-import { Facebook, Instagram } from "lucide-react";
+// 1. Importe os nossos novos ícones personalizados
+import { FacebookIcon } from "./icons/facebook-icon";
+import { InstagramIcon } from "./icons/instagram-icon";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -15,21 +17,16 @@ export function Footer() {
           </p>
           
           <div className="flex items-center gap-2 mt-4 md:mt-0">
+            {/* 2. Use os novos componentes de ícone */}
             <Button asChild variant="ghost" size="icon">
               <Link href="https://facebook.com" target="_blank">
-                <Facebook 
-                  className="h-7 w-7 text-muted-foreground hover:text-primary transition-colors" 
-                  strokeWidth={2.25} // Deixa o traço mais grosso
-                />
+                <FacebookIcon className="h-6 w-6 text-muted-foreground hover:text-primary transition-colors" />
                 <span className="sr-only">Facebook</span>
               </Link>
             </Button>
             <Button asChild variant="ghost" size="icon">
               <Link href="https://instagram.com" target="_blank">
-                <Instagram 
-                  className="h-7 w-7 text-muted-foreground hover:text-primary transition-colors"
-                  strokeWidth={2.25} // Deixa o traço mais grosso
-                />
+                <InstagramIcon className="h-6 w-6 text-muted-foreground hover:text-primary transition-colors" />
                 <span className="sr-only">Instagram</span>
               </Link>
             </Button>
