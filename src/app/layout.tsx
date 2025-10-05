@@ -1,15 +1,18 @@
 // src/app/layout.tsx
 import type { Metadata } from "next";
-import { Inter } from "next/font/google"; // Usaremos a fonte Inter para um look mais moderno
+// 1. Importe a fonte Poppins em vez da Inter
+import { Poppins } from "next/font/google";
 import "./globals.css";
-import { Header } from "../components/header"; // Importe o Header com caminho relativo
-import { Footer } from "../components/footer"; // Importe o Footer com caminho relativo
-
+import { Header } from "../components/header";
+import { Footer } from "../components/footer";
 import { WhatsAppButton } from "../components/whatsapp-button";
+import { PageTransition } from "../components/page-transition";
 
-const inter = Inter({
+// 2. Configure a fonte Poppins com os pesos que vamos usar
+const poppins = Poppins({
   subsets: ["latin"],
-  variable: "--font-sans",
+  weight: ["400", "600", "700"], // Regular, Semi-Bold, Bold
+  variable: "--font-sans", // Manter a mesma variável CSS
 });
 
 export const metadata: Metadata = {
@@ -23,10 +26,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={inter.variable}>
+    // 3. Aplique a nova variável da fonte Poppins
+    <html lang="pt-BR" className={`${poppins.variable} scroll-smooth`}>
       <body className="min-h-screen flex flex-col font-sans antialiased">
         <Header />
-        <main className="flex-grow">{children}</main>
+        <PageTransition>
+          <main className="flex-grow">{children}</main>
+        </PageTransition>
         <Footer />
         <WhatsAppButton />
       </body>
