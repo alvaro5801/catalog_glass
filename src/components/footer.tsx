@@ -8,7 +8,7 @@ export function Footer() {
 
   return (
     <footer className="border-t bg-muted">
-      <div className="container mx-auto px-30 py-6">
+      <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col md:flex-row items-center justify-between">
           <p className="text-sm text-muted-foreground text-center md:text-left">
             © {currentYear} Printa Copos. Todos os direitos reservados.
@@ -17,7 +17,6 @@ export function Footer() {
           <div className="flex items-center gap-4 mt-4 md:mt-0">
             <Button asChild variant="ghost">
               <Link href="https://facebook.com" target="_blank">
-                {/* Removemos as classes de tamanho e adicionámos o estilo inline */}
                 <FaFacebook
                   className="text-muted-foreground hover:text-primary transition-colors"
                   style={{ height: '32px', width: '32px' }}
@@ -27,7 +26,6 @@ export function Footer() {
             </Button>
             <Button asChild variant="ghost">
               <Link href="https://instagram.com" target="_blank">
-                {/* Removemos as classes de tamanho e adicionámos o estilo inline */}
                 <FaInstagram
                   className="text-muted-foreground hover:text-primary transition-colors"
                   style={{ height: '32px', width: '32px' }}
