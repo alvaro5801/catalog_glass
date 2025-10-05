@@ -25,7 +25,15 @@ export default function Home() {
     Copos: GlassWater,
     Taças: Wine,
     Canecas: Coffee,
-    Squeezes: CupSoda,
+    Squeezes: GlassWater,
+  };
+
+  // Mapa para as cores de hover
+  const categoryHoverColors: { [key: string]: string } = {
+    Copos: 'group-hover:text-sky-500',
+    Taças: 'group-hover:text-red-500',
+    Canecas: 'group-hover:text-amber-600',
+    Squeezes: 'group-hover:text-lime-500',
   };
 
   const heroRef = useRef(null);
@@ -41,7 +49,7 @@ export default function Home() {
       {/* Secção 1: Banner Principal com Efeito Parallax */}
       <section
         ref={heroRef}
-        className="relative h-[80vh] w-full overflow-hidden"
+        className="relative h-screen w-full overflow-hidden"
       >
         <motion.div
           style={{ y: textY }}
@@ -75,54 +83,10 @@ export default function Home() {
             y: backgroundY,
           }}
         />
-        <div className="absolute inset-0 z-0 bg-black/60" />
+        <div className="absolute inset-0 z-0 bg-black/40" />
       </section>
 
-      {/* Secção 2: Produtos em Destaque */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-2xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold">Os Mais Pedidos</h2>
-            <p className="mt-4 text-muted-foreground">Conheça os produtos favoritos dos nossos clientes.</p>
-          </div>
-          <div className="mt-12">
-            <Carousel opts={{ align: "start", loop: true }} className="w-full max-w-sm md:max-w-2xl lg:max-w-5xl mx-auto">
-              <CarouselContent>
-                {featuredProducts.map((product) => (
-                  <CarouselItem key={product.id} className="sm:basis-1/2 lg:basis-1/4">
-                    <div className="p-1"><ProductCard product={product} /></div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="hidden sm:inline-flex" />
-              <CarouselNext className="hidden sm:inline-flex" />
-            </Carousel>
-          </div>
-        </div>
-      </section>
-
-      {/* Secção 3: Navegue por Categoria */}
-      <section className="bg-muted py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-2xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold">Navegue por Categoria</h2>
-            <p className="mt-4 text-muted-foreground">Encontre exatamente o que precisa de forma rápida e fácil.</p>
-          </div>
-          <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 max-w-4xl mx-auto">
-            {categories.map((category) => {
-              const Icon = categoryIcons[category] || GlassWater;
-              return (
-                <Link href={`/catalogo?categoria=${category.toLowerCase()}`} key={category} className="group flex flex-col items-center justify-center p-6 bg-background rounded-lg border shadow-sm hover:shadow-lg transition-all hover:-translate-y-1">
-                  <Icon className="h-10 w-10 text-muted-foreground group-hover:text-primary transition-colors" />
-                  <h3 className="mt-4 text-lg font-semibold">{category}</h3>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Secção 4: Como Funciona */}
+      {/* Secção 2: Como Funciona */}
       <section id="como-funciona" className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-2xl mx-auto">
@@ -145,6 +109,51 @@ export default function Home() {
               <h3 className="text-xl font-semibold">3. Chame no WhatsApp</h3>
               <p className="mt-2 text-muted-foreground">Clique no botão de contacto para falar com a nossa equipa e finalizar o seu pedido.</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Secção 3: Produtos em Destaque */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center max-w-2xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold">Os Mais Pedidos</h2>
+            <p className="mt-4 text-muted-foreground">Conheça os produtos favoritos dos nossos clientes.</p>
+          </div>
+          <div className="mt-12">
+            <Carousel opts={{ align: "start", loop: true }} className="w-full max-w-sm md:max-w-2xl lg:max-w-5xl mx-auto">
+              <CarouselContent>
+                {featuredProducts.map((product) => (
+                  <CarouselItem key={product.id} className="sm:basis-1/2 lg:basis-1/4">
+                    <div className="p-1"><ProductCard product={product} /></div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="hidden sm:inline-flex" />
+              <CarouselNext className="hidden sm:inline-flex" />
+            </Carousel>
+          </div>
+        </div>
+      </section>
+
+      {/* Secção 4: Navegue por Categoria (COM CORES DE HOVER) */}
+      <section className="bg-muted py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center max-w-2xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold">Navegue por Categoria</h2>
+            <p className="mt-4 text-muted-foreground">Encontre exatamente o que precisa de forma rápida e fácil.</p>
+          </div>
+          <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 max-w-4xl mx-auto">
+            {categories.map((category) => {
+              const Icon = categoryIcons[category] || GlassWater;
+              const hoverColorClass = categoryHoverColors[category] || 'group-hover:text-primary';
+              return (
+                <Link href={`/catalogo?categoria=${category.toLowerCase()}`} key={category} className="group flex flex-col items-center justify-center p-6 bg-background rounded-lg border shadow-sm hover:shadow-lg transition-all hover:-translate-y-1">
+                  <Icon className={`h-10 w-10 text-muted-foreground transition-colors ${hoverColorClass}`} />
+                  <h3 className="mt-4 text-lg font-semibold">{category}</h3>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>
