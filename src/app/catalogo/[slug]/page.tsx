@@ -4,15 +4,9 @@ import { products } from "../../../data/products";
 import { notFound } from "next/navigation";
 import { ProductDetail } from "../../../components/product-detail";
 
-// Interface para definir as props
-interface ProductPageProps {
-  params: {
-    slug: string;
-  };
-}
+// Não vamos usar mais a interface ProductPageProps
 
 // A função de servidor para gerar as páginas estáticas
-// 1. Adicionado 'async' para corrigir o erro de tipo do Next.js
 export async function generateStaticParams() {
   return products.map((product) => ({
     slug: product.slug,
@@ -20,7 +14,8 @@ export async function generateStaticParams() {
 }
 
 // O componente de servidor que busca os dados
-export default function ProductPage({ params }: ProductPageProps) {
+// A alteração foi feita aqui, na tipagem das props
+export default function ProductPage({ params }: { params: { slug: string } }) {
   const { slug } = params;
   const product = products.find((p) => p.slug === slug);
 
