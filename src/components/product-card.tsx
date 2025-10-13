@@ -9,17 +9,24 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const startingPrice = product.priceTable[product.priceTable.length - 1].price;
+  // Pega a primeira imagem, ou undefined se a lista estiver vazia
+  const imageUrl = product.images[0];
 
   return (
     <div className="border rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
       <Link href={`/catalogo/${product.slug}`} className="group aspect-square bg-muted overflow-hidden relative">
-        <Image
-          src={product.images[0] || ''}
-          alt={product.name}
-          fill
-          className="object-cover group-hover:scale-105 transition-transform duration-300"
-        />
+        {imageUrl ? (
+          // Se houver uma imagem, mostra-a
+          <Image
+            src={imageUrl}
+            alt={product.name}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          // Se não houver, mostra uma "caixa vazia" cinzenta
+          <div className="w-full h-full bg-muted" />
+        )}
       </Link>
 
       <div className="p-4 flex flex-col flex-grow">
@@ -28,10 +35,8 @@ export function ProductCard({ product }: ProductCardProps) {
             {product.name}
           </Link>
         </h3>
-       
         
-        {/* Adicione a classe 'self-center' aqui */}
-        <Button size="sm" asChild className="mt-auto  self-center">
+        <Button size="sm" asChild className="mt-auto self-center">
           <Link href={`/catalogo/${product.slug}`}>Valores</Link>
         </Button>
       </div>

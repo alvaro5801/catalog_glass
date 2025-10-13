@@ -5,15 +5,16 @@ import { useState } from "react";
 import type { Product } from "../lib/types";
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "./ui/button"; // 1. Importe o componente Button
-import { ArrowLeft } from "lucide-react"; // 2. Importe o ícone da seta
+import { Button } from "./ui/button";
+import { ArrowLeft } from "lucide-react";
 
 interface ProductDetailProps {
   product: Product;
 }
 
 export function ProductDetail({ product }: ProductDetailProps) {
-  const [activeImage, setActiveImage] = useState(product.images[0]);
+  // Inicia com a primeira imagem, ou null se não houver nenhuma
+  const [activeImage, setActiveImage] = useState(product.images[0] || null);
   
   const whatsappMessage = encodeURIComponent(
     `Olá! Vi o produto "${product.name}" no site e gostaria de mais informações.`
@@ -22,7 +23,6 @@ export function ProductDetail({ product }: ProductDetailProps) {
 
   return (
     <main className="container mx-auto py-12 px-4">
-      {/* 3. Substitua o Link antigo pelo novo Button */}
       <Button asChild variant="outline" className="mb-8 w-fit">
         <Link href="/catalogo">
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -34,35 +34,46 @@ export function ProductDetail({ product }: ProductDetailProps) {
         {/* Lado Esquerdo: Galeria de Imagens */}
         <div className="flex flex-col gap-4">
           <div className="aspect-square bg-muted rounded-lg overflow-hidden relative">
-            <Image
-              src={activeImage}
-              alt={product.name}
-              fill
-              className="object-cover transition-opacity duration-300"
-            />
+            {activeImage ? (
+              // Mostra a imagem principal se ela existir
+              <Image
+                src={activeImage}
+                alt={product.name}
+                fill
+                className="object-cover transition-opacity duration-300"
+              />
+            ) : (
+              // Mostra uma "caixa vazia" se não houver imagem
+              <div className="w-full h-full bg-muted" />
+            )}
           </div>
-          <div className="grid grid-cols-5 gap-4">
-            {product.images.map((image) => (
-              <button
-                key={image}
-                onClick={() => setActiveImage(image)}
-                className={`aspect-square bg-muted rounded-md overflow-hidden relative border-2 ${
-                  activeImage === image ? "border-primary" : "border-transparent"
-                }`}
-              >
-                <Image
-                  src={image}
-                  alt={`${product.name} thumbnail`}
-                  fill
-                  className="object-cover"
-                />
-              </button>
-            ))}
-          </div>
+          
+          {/* Só mostra as miniaturas se houver mais de uma imagem */}
+          {product.images.length > 1 && (
+            <div className="grid grid-cols-5 gap-4">
+              {product.images.map((image) => (
+                <button
+                  key={image}
+                  onClick={() => setActiveImage(image)}
+                  className={`aspect-square bg-muted rounded-md overflow-hidden relative border-2 ${
+                    activeImage === image ? "border-primary" : "border-transparent"
+                  }`}
+                >
+                  <Image
+                    src={image}
+                    alt={`${product.name} thumbnail`}
+                    fill
+                    className="object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Lado Direito: Detalhes do Produto */}
         <div>
+          {/* ... (o resto do código permanece igual) ... */}
           <h1 className="text-4xl font-bold tracking-tight">{product.name}</h1>
           <p className="text-lg text-muted-foreground mt-4">{product.description}</p>
           <div className="mt-8">
