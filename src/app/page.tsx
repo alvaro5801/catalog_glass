@@ -4,19 +4,12 @@
 import { useRef } from "react";
 import { Button } from "../components/ui/button";
 import Link from "next/link";
-import {
-  Search, PenSquare, MessageCircle, GlassWater, CupSoda, Wine, Coffee
-} from "lucide-react";
+import { Search, PenSquare, MessageCircle, GlassWater, Wine, Coffee } from "lucide-react";
 import { products } from "../data/products";
 import { ProductCard } from "../components/product-card";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "../components/ui/carousel";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "../components/ui/carousel";
 import { motion, useScroll, useTransform } from "framer-motion";
+import PageLayout from "./page-layout"; // Importar o PageLayout
 
 export default function Home() {
   const featuredProducts = products.slice(0, 8);
@@ -28,7 +21,6 @@ export default function Home() {
     Squeezes: GlassWater,
   };
 
-  // Mapa para as cores de hover
   const categoryHoverColors: { [key: string]: string } = {
     Copos: 'group-hover:text-sky-500',
     Taças: 'group-hover:text-red-500',
@@ -45,16 +37,11 @@ export default function Home() {
   const textY = useTransform(scrollYProgress, [0, 1], ["0%", "200%"]);
 
   return (
-    <main>
+    <PageLayout>
       {/* Secção 1: Banner Principal com Efeito Parallax */}
-      <section
-        ref={heroRef}
-        className="relative h-screen w-full overflow-hidden"
-      >
-        <motion.div
-          style={{ y: textY }}
-          className="relative z-10 flex h-full flex-col items-center justify-center text-center text-white"
-        >
+      <section ref={heroRef} className="relative h-screen w-full overflow-hidden">
+        {/* ... conteúdo da secção ... */}
+        <motion.div style={{ y: textY }} className="relative z-10 flex h-full flex-col items-center justify-center text-center text-white">
           <div className="max-w-3xl mx-auto px-4">
             <h1 className="text-4xl md:text-6xl font-bold tracking-tighter">
               Transforme Momentos em Memórias com Copos Personalizados
@@ -73,21 +60,13 @@ export default function Home() {
             </div>
           </div>
         </motion.div>
-
-        <motion.div
-          className="absolute inset-0 z-0"
-          style={{
-            backgroundImage: `url(/images/hero-background.jpg)`,
-            backgroundPosition: "center",
-            backgroundSize: "cover",
-            y: backgroundY,
-          }}
-        />
+        <motion.div className="absolute inset-0 z-0" style={{ backgroundImage: `url(/images/hero-background.jpg)`, backgroundPosition: "center", backgroundSize: "cover", y: backgroundY }} />
         <div className="absolute inset-0 z-0 bg-black/40" />
       </section>
 
       {/* Secção 2: Como Funciona */}
       <section id="como-funciona" className="py-20">
+        {/* ... conteúdo da secção ... */}
         <div className="container mx-auto px-4">
           <div className="text-center max-w-2xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold">Personalize em Apenas 3 Passos</h2>
@@ -115,6 +94,7 @@ export default function Home() {
 
       {/* Secção 3: Produtos em Destaque */}
       <section className="py-20">
+        {/* ... conteúdo da secção ... */}
         <div className="container mx-auto px-4">
           <div className="text-center max-w-2xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold">Os Mais Pedidos</h2>
@@ -136,8 +116,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Secção 4: Navegue por Categoria (COM CORES DE HOVER) */}
+      {/* Secção 4: Navegue por Categoria */}
       <section className="bg-muted py-20">
+        {/* ... conteúdo da secção ... */}
         <div className="container mx-auto px-4">
           <div className="text-center max-w-2xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold">Navegue por Categoria</h2>
@@ -157,6 +138,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-    </main>
+    </PageLayout>
   );
 }
