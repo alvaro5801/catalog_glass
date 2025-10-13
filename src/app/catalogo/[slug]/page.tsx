@@ -2,7 +2,7 @@
 
 import { products } from "../../../data/products";
 import { notFound } from "next/navigation";
-import { ProductDetail } from "../../../components/product-detail"; // Importe o novo componente
+import { ProductDetail } from "../../../components/product-detail";
 
 // Interface para definir as props
 interface ProductPageProps {
@@ -12,7 +12,8 @@ interface ProductPageProps {
 }
 
 // A função de servidor para gerar as páginas estáticas
-export function generateStaticParams() {
+// 1. Adicionado 'async' para corrigir o erro de tipo do Next.js
+export async function generateStaticParams() {
   return products.map((product) => ({
     slug: product.slug,
   }));
