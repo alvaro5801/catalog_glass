@@ -2,7 +2,7 @@
 import { products } from "../../../data/products";
 import { notFound } from "next/navigation";
 import { ProductDetail } from "../../../components/product-detail";
-import type { Metadata } from "next";
+import type { Metadata } from "next/types"; // ✅ CORRIGIDO AQUI
 
 type MetadataProps = {
   params: { slug: string };
@@ -30,13 +30,13 @@ export async function generateStaticParams() {
   }));
 }
 
-// ✅ Correção: função async e resolução segura do tipo
+// ✅ Função da página
 export default async function ProductPage({
   params,
 }: {
   params: { slug: string };
 }) {
-  const resolvedParams = await Promise.resolve(params); // cobre o caso Promise<{slug}>
+  const resolvedParams = await Promise.resolve(params);
   const { slug } = resolvedParams;
 
   const product = products.find((p) => p.slug === slug);
