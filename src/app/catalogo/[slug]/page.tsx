@@ -10,16 +10,13 @@ export async function generateStaticParams() {
   }));
 }
 
-// Define a tipagem de props de página conforme o padrão do Next 15
-interface ProductPageProps {
-  params: Promise<{ slug: string }> | { slug: string };
-}
-
-// Página do produto
-export default async function ProductPage({ params }: ProductPageProps) {
-  // ✅ Corrige a diferença entre Promise e objeto
-  const resolvedParams = await Promise.resolve(params);
-  const { slug } = resolvedParams;
+// ✅ Página do produto (tipagem compatível com Next 15)
+export default async function ProductPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
+  const { slug } = await Promise.resolve(params); // garante compatibilidade
 
   const product = products.find((p) => p.slug === slug);
 
