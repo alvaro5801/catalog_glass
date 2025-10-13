@@ -10,7 +10,7 @@ import { Input } from "./ui/input";
 export function Header() {
   const pathname = usePathname();
 
-  // Cabeçalho para a landing page do SaaS
+  // Cabeçalho para a landing page do SaaS (não logado)
   if (pathname === '/saas') {
     return (
       <header className="border-b sticky top-0 bg-white z-10">
@@ -18,7 +18,6 @@ export function Header() {
           <nav className="flex items-center gap-2 text-base font-medium">
             <Input type="email" placeholder="E-mail" className="hidden sm:flex" />
             <Input type="password" placeholder="Senha" className="hidden sm:flex" />
-            {/* 1. Alterado: Agora leva para a página inicial de produtos */}
             <Button asChild>
               <Link href="/">Entrar</Link>
             </Button>
@@ -45,7 +44,7 @@ export function Header() {
           />
         </Link>
 
-        <nav className="flex items-center gap-6 text-base font-medium">
+        <nav className="flex items-center gap-4 text-base font-medium">
           <Link href="/" className="text-muted-foreground hover:text-primary transition-colors">
             Início
           </Link>
@@ -53,9 +52,13 @@ export function Header() {
             Catálogo
           </Link>
           
-          {/* 2. Alterado: Agora leva para a página de configuração */}
           <Button asChild>
             <Link href="/configure">Configure seu Catálogo</Link>
+          </Button>
+          
+          {/* Botão "Sair" adicionado aqui */}
+          <Button variant="outline" asChild>
+            <Link href="/saas">Sair</Link>
           </Button>
         </nav>
       </div>
