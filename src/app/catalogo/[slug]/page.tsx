@@ -1,23 +1,21 @@
 // src/app/catalogo/[slug]/page.tsx
-
 import { products } from "../../../data/products";
 import { notFound } from "next/navigation";
 import { ProductDetail } from "../../../components/product-detail";
-import type { Metadata } from 'next';
+import type { Metadata } from "next";
 
-// O tipo de props foi movido para dentro da assinatura da função generateMetadata
 type MetadataProps = {
   params: { slug: string };
 };
 
-export async function generateMetadata({ params }: MetadataProps): Promise<Metadata> {
-  const slug = params.slug;
+export async function generateMetadata(
+  { params }: MetadataProps
+): Promise<Metadata> {
+  const { slug } = params;
   const product = products.find((p) => p.slug === slug);
 
   if (!product) {
-    return {
-      title: "Produto Não Encontrado",
-    };
+    return { title: "Produto Não Encontrado" };
   }
 
   return {
@@ -32,9 +30,15 @@ export async function generateStaticParams() {
   }));
 }
 
+// ✅ Correção: função async e resolução segura do tipo
+export default async function ProductPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
+  const resolvedParams = await Promise.resolve(params); // cobre o caso Promise<{slug}>
+  const { slug } = resolvedParams;
 
-export default function ProductPage({ params }: { params: { slug: string } }) {
-  const { slug } = params;
   const product = products.find((p) => p.slug === slug);
 
   if (!product) {
