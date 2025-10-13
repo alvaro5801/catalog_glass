@@ -1,28 +1,26 @@
 // src/app/catalogo/[slug]/page.tsx
+
 import { products } from "../../../data/products";
 import { notFound } from "next/navigation";
 import { ProductDetail } from "../../../components/product-detail";
 
-// Gera as rotas estáticas
+// A função de servidor para gerar as páginas estáticas
 export async function generateStaticParams() {
   return products.map((product) => ({
     slug: product.slug,
   }));
 }
 
-// ✅ Página do produto (tipagem compatível com Next 15)
-export default async function ProductPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
-  const { slug } = await Promise.resolve(params); // garante compatibilidade
-
+// O componente de servidor que busca os dados
+// A alteração foi feita aqui para corrigir o erro de tipo
+export default function ProductPage({ params }: { params: { slug: string } }) {
+  const { slug } = params;
   const product = products.find((p) => p.slug === slug);
 
   if (!product) {
     notFound();
   }
 
+  // A página apenas retorna o componente de cliente, passando os dados do produto
   return <ProductDetail product={product} />;
 }
