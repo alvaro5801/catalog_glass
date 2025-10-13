@@ -12,8 +12,12 @@ export async function generateStaticParams() {
 }
 
 // O componente de servidor que busca os dados
-// A alteração foi feita aqui para corrigir o erro de tipo
-export default function ProductPage({ params }: { params: { slug: string } }) {
+// ✅ Tipagem final para compatibilidade com a Vercel
+export default function ProductPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
   const { slug } = params;
   const product = products.find((p) => p.slug === slug);
 
