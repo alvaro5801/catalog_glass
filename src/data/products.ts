@@ -9,8 +9,8 @@ export const products: Product[] = [
     shortDescription: 'Ideal para festas, eventos e brindes corporativos.',
     description:
       'O Copo Long Drink é um clássico versátil para qualquer ocasião. Feito de acrílico resistente, pode ser personalizado com sua marca, nome ou design exclusivo em alta qualidade de impressão.',
-    // Deixe aqui as imagens que você já tem
-    images: ['/images/products/long-drink-1.jpg', '/images/products/long-drink-2.jpg', '/images/products/long-drink-3.jpg'],
+    // Alterado para uma lista vazia para garantir o build
+    images: [],
     specifications: { material: 'Acrílico Poliestireno', capacidade: '350ml', dimensoes: '15cm altura x 6cm diâmetro' },
     priceTable: [
       { quantity: '10-29 unidades', price: 4.5 },
@@ -53,7 +53,6 @@ export const products: Product[] = [
     priceInfo: 'Impressão por sublimação sem limite de cores.',
     category: 'Canecas',
   },
-  // ... (restante dos produtos com images: [])
   {
     id: 4,
     slug: 'copo-termico-inox',
