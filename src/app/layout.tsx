@@ -1,15 +1,11 @@
-// src/app/layout.tsx
+// src/app/layout.tsx (versão simplificada)
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
-import { Header } from "../components/header";
-import { Footer } from "../components/footer";
-import { WhatsAppButton } from "../components/whatsapp-button";
-import { PageTransition } from "../components/page-transition";
 
 const poppins = Poppins({
   subsets: ["latin"],
-  weight: ["400", "600", "700"], // Regular, Semi-Bold, Bold
+  weight: ["400", "600", "700"],
   variable: "--font-sans",
 });
 
@@ -26,12 +22,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${poppins.variable} scroll-smooth`}>
       <body className="min-h-screen flex flex-col font-sans antialiased">
-        <Header />
-        <PageTransition>
-          <main className="flex-grow">{children}</main>
-        </PageTransition>
-        <Footer />
-        <WhatsAppButton />
+        {children}
       </body>
     </html>
   );

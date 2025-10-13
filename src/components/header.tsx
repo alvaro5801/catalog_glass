@@ -1,29 +1,62 @@
 // src/components/header.tsx
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { Button } from "./ui/button";
+import { usePathname } from 'next/navigation';
+import { Input } from "./ui/input";
 
 export function Header() {
+  const pathname = usePathname();
+
+  // Cabeçalho para a landing page do SaaS
+  if (pathname === '/saas') {
+    return (
+      <header className="border-b sticky top-0 bg-white z-10">
+        <div className="container mx-auto px-4 h-24 flex items-center justify-end">
+          <nav className="flex items-center gap-2 text-base font-medium">
+            <Input type="email" placeholder="E-mail" className="hidden sm:flex" />
+            <Input type="password" placeholder="Senha" className="hidden sm:flex" />
+            {/* 1. Alterado: Agora leva para a página inicial de produtos */}
+            <Button asChild>
+              <Link href="/">Entrar</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/signup">Cadastre-se</Link>
+            </Button>
+          </nav>
+        </div>
+      </header>
+    );
+  }
+
+  // Cabeçalho para o site de produtos (área "logada")
   return (
     <header className="border-b sticky top-0 bg-white z-10">
-      {/* Adicionei 'overflow-hidden' ao div que tem h-24 */}
-      <div className="container mx-auto px-4 h-24 flex items-center justify-between overflow-hidden"> {/* <-- MUDANÇA AQUI */}
+      <div className="container mx-auto px-4 h-24 flex items-center justify-between overflow-hidden">
         <Link href="/" className="flex items-center gap-2">
           <Image
             src="/logo.jpg"
             alt="Logótipo Printa Copos"
             width={234}
             height={98}
-            className="h-32 w-auto" // Aumentei o logo para h-32 (128px) como exemplo
+            className="h-32 w-auto"
           />
         </Link>
 
-        <nav className="flex items-center gap-6 text-base font-medium text-muted-foreground">
-          <Link href="/" className="hover:text-primary transition-colors">
+        <nav className="flex items-center gap-6 text-base font-medium">
+          <Link href="/" className="text-muted-foreground hover:text-primary transition-colors">
             Início
           </Link>
-          <Link href="/catalogo" className="hover:text-primary transition-colors">
+          <Link href="/catalogo" className="text-muted-foreground hover:text-primary transition-colors">
             Catálogo
           </Link>
+          
+          {/* 2. Alterado: Agora leva para a página de configuração */}
+          <Button asChild>
+            <Link href="/configure">Configure seu Catálogo</Link>
+          </Button>
         </nav>
       </div>
     </header>
