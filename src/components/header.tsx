@@ -10,7 +10,6 @@ import { Input } from "./ui/input";
 export function Header() {
   const pathname = usePathname();
 
-  // Cabeçalho para a landing page do SaaS
   if (pathname === '/saas') {
     return (
       <header className="border-b sticky top-0 bg-white z-10">
@@ -18,10 +17,13 @@ export function Header() {
           <nav className="flex items-center gap-2 text-base font-medium">
             <Input type="email" placeholder="E-mail" className="hidden sm:flex" />
             <Input type="password" placeholder="Senha" className="hidden sm:flex" />
-            {/* 1. Alterado: Agora leva para a página inicial de produtos */}
+            
+            {/* --- ALTERAÇÃO AQUI --- */}
+            {/* O botão "Entrar" agora aponta para o nosso porteiro/redirecionador */}
             <Button asChild>
-              <Link href="/">Entrar</Link>
+              <Link href="/login-redirect">Entrar</Link>
             </Button>
+
             <Button variant="outline" asChild>
               <Link href="/signup">Cadastre-se</Link>
             </Button>
@@ -31,32 +33,18 @@ export function Header() {
     );
   }
 
-  // Cabeçalho para o site de produtos (área "logada")
+  // Cabeçalho para o site de produtos ("logado")
   return (
     <header className="border-b sticky top-0 bg-white z-10">
       <div className="container mx-auto px-4 h-24 flex items-center justify-between overflow-hidden">
         <Link href="/" className="flex items-center gap-2">
-          <Image
-            src="/logo.jpg"
-            alt="Logótipo Printa Copos"
-            width={234}
-            height={98}
-            className="h-32 w-auto"
-          />
+          <Image src="/logo.jpg" alt="Logótipo Printa Copos" width={234} height={98} className="h-32 w-auto" />
         </Link>
-
-        <nav className="flex items-center gap-6 text-base font-medium">
-          <Link href="/" className="text-muted-foreground hover:text-primary transition-colors">
-            Início
-          </Link>
-          <Link href="/catalogo" className="text-muted-foreground hover:text-primary transition-colors">
-            Catálogo
-          </Link>
-          
-          {/* 2. Alterado: Agora leva para a página de configuração */}
-          <Button asChild>
-            <Link href="/configure">Configure seu Catálogo</Link>
-          </Button>
+        <nav className="flex items-center gap-4 text-base font-medium">
+          <Link href="/" className="text-muted-foreground hover:text-primary transition-colors">Início</Link>
+          <Link href="/catalogo" className="text-muted-foreground hover:text-primary transition-colors">Catálogo</Link>
+          <Button asChild><Link href="/admin/dashboard">Aceder ao Painel</Link></Button>
+          <Button variant="outline" asChild><Link href="/saas">Sair</Link></Button>
         </nav>
       </div>
     </header>
