@@ -9,7 +9,8 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const startingPrice = product.priceTable[product.priceTable.length - 1].price;
+  // A linha abaixo foi removida
+  // const startingPrice = product.priceTable[product.priceTable.length - 1].price;
 
   return (
     <div className="border rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
@@ -28,8 +29,8 @@ export function ProductCard({ product }: ProductCardProps) {
             {product.name}
           </Link>
         </h3>
-       
-        
+
+
         {/* Adicione a classe 'self-center' aqui */}
         <Button size="sm" asChild className="mt-auto  self-center">
           <Link href={`/catalogo/${product.slug}`}>Valores</Link>
