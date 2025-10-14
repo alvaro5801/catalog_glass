@@ -2,7 +2,7 @@
 import { products } from "../../../data/products";
 import { notFound } from "next/navigation";
 import { ProductDetail } from "../../../components/product-detail";
-import type { Metadata } from "next/types"; // ✅ CORRIGIDO AQUI
+import type { Metadata } from "next/types"; 
 
 type MetadataProps = {
   params: { slug: string };
