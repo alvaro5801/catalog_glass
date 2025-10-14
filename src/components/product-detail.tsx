@@ -1,19 +1,20 @@
 // src/components/product-detail.tsx
-"use client"; // Este é o nosso componente interativo
+"use client";
 
 import { useState } from "react";
 import type { Product } from "../lib/types";
 import Image from "next/image";
 import Link from "next/link";
+import { Button } from "./ui/button"; // 1. Importe o componente Button
+import { ArrowLeft } from "lucide-react"; // 2. Importe o ícone da seta
 
 interface ProductDetailProps {
   product: Product;
 }
 
 export function ProductDetail({ product }: ProductDetailProps) {
-  // Toda a lógica interativa (useState) vive aqui agora
   const [activeImage, setActiveImage] = useState(product.images[0]);
-
+  
   const whatsappMessage = encodeURIComponent(
     `Olá! Vi o produto "${product.name}" no site e gostaria de mais informações.`
   );
@@ -21,9 +22,13 @@ export function ProductDetail({ product }: ProductDetailProps) {
 
   return (
     <main className="container mx-auto py-12 px-4">
-      <Link href="/catalogo" className="text-primary hover:underline mb-8 block">
-        &larr; Voltar para o Catálogo
-      </Link>
+      {/* 3. Substitua o Link antigo pelo novo Button */}
+      <Button asChild variant="outline" className="mb-8 w-fit">
+        <Link href="/catalogo">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Voltar para o Catálogo
+        </Link>
+      </Button>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
         {/* Lado Esquerdo: Galeria de Imagens */}
@@ -41,8 +46,9 @@ export function ProductDetail({ product }: ProductDetailProps) {
               <button
                 key={image}
                 onClick={() => setActiveImage(image)}
-                className={`aspect-square bg-muted rounded-md overflow-hidden relative border-2 ${activeImage === image ? "border-primary" : "border-transparent"
-                  }`}
+                className={`aspect-square bg-muted rounded-md overflow-hidden relative border-2 ${
+                  activeImage === image ? "border-primary" : "border-transparent"
+                }`}
               >
                 <Image
                   src={image}
@@ -84,12 +90,12 @@ export function ProductDetail({ product }: ProductDetailProps) {
             <p className="text-sm text-muted-foreground mt-2">{product.priceInfo}</p>
           </div>
           <div className="mt-8">
-            <h2 className="text-2xl font-semibold mb-3">Especificações</h2>
-            <ul className="list-disc list-inside text-muted-foreground space-y-1">
-              <li><strong>Material:</strong> {product.specifications.material}</li>
-              <li><strong>Capacidade:</strong> {product.specifications.capacidade}</li>
-              <li><strong>Dimensões:</strong> {product.specifications.dimensoes}</li>
-            </ul>
+             <h2 className="text-2xl font-semibold mb-3">Especificações</h2>
+              <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                <li><strong>Material:</strong> {product.specifications.material}</li>
+                <li><strong>Capacidade:</strong> {product.specifications.capacidade}</li>
+                <li><strong>Dimensões:</strong> {product.specifications.dimensoes}</li>
+              </ul>
           </div>
           <a
             href={whatsappLink}
