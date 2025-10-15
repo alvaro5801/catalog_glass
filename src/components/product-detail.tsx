@@ -2,15 +2,20 @@
 "use client";
 
 import { useState } from "react";
-import type { Product } from "../lib/types";
+import type { Product } from "@/lib/types"; 
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "./ui/button"; // 1. Importe o componente Button
-import { ArrowLeft } from "lucide-react"; // 2. Importe o ícone da seta
+import { Button } from "@/components/ui/button"; 
+import { ArrowLeft } from "lucide-react";
 
 interface ProductDetailProps {
   product: Product;
 }
+
+type PriceTier = {
+    quantity: string;
+    price: number;
+};
 
 export function ProductDetail({ product }: ProductDetailProps) {
   const [activeImage, setActiveImage] = useState(product.images[0]);
@@ -22,7 +27,6 @@ export function ProductDetail({ product }: ProductDetailProps) {
 
   return (
     <main className="container mx-auto py-12 px-4">
-      {/* 3. Substitua o Link antigo pelo novo Button */}
       <Button asChild variant="outline" className="mb-8 w-fit">
         <Link href="/catalogo">
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -31,7 +35,6 @@ export function ProductDetail({ product }: ProductDetailProps) {
       </Button>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
-        {/* Lado Esquerdo: Galeria de Imagens */}
         <div className="flex flex-col gap-4">
           <div className="aspect-square bg-muted rounded-lg overflow-hidden relative">
             <Image
@@ -42,7 +45,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
             />
           </div>
           <div className="grid grid-cols-5 gap-4">
-            {product.images.map((image) => (
+            {product.images.map((image: string, index: number) => (
               <button
                 key={image}
                 onClick={() => setActiveImage(image)}
@@ -52,7 +55,8 @@ export function ProductDetail({ product }: ProductDetailProps) {
               >
                 <Image
                   src={image}
-                  alt={`${product.name} thumbnail`}
+                  // ✅ O 'alt' text único e numerado está correto aqui
+                  alt={`${product.name} thumbnail ${index + 1}`}
                   fill
                   className="object-cover"
                 />
@@ -61,7 +65,6 @@ export function ProductDetail({ product }: ProductDetailProps) {
           </div>
         </div>
 
-        {/* Lado Direito: Detalhes do Produto */}
         <div>
           <h1 className="text-4xl font-bold tracking-tight">{product.name}</h1>
           <p className="text-lg text-muted-foreground mt-4">{product.description}</p>
@@ -76,7 +79,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {product.priceTable.map((tier) => (
+                  {product.priceTable.map((tier: PriceTier) => (
                     <tr key={tier.quantity} className="border-t">
                       <td className="p-3">{tier.quantity}</td>
                       <td className="p-3 text-right">
