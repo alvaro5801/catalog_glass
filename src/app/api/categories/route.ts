@@ -2,8 +2,8 @@
 import { NextResponse } from 'next/server';
 
 // --- SIMULAÇÃO DA BASE DE DADOS ---
-// Esta variável 'exportada' será a nossa fonte de verdade única para as categorias.
-export let categories: string[] = ["Bebidas", "Comidas", "Sobremesas"];
+// ✅ CORREÇÃO: Alterado de 'let' para 'const'. O conteúdo do array ainda pode ser modificado.
+export const categories: string[] = ["Bebidas", "Comidas", "Sobremesas"];
 
 // --- FUNÇÃO GET ---
 // Executada quando o front-end faz uma chamada GET para /api/categories
