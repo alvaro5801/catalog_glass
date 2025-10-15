@@ -1,6 +1,6 @@
 // src/components/__tests__/OnboardingWizard.test.tsx
 import React from 'react';
-// ✅ CORREÇÃO: 'waitFor' foi removido da importação.
+// ✅ CORREÇÃO: 'waitFor' foi removido desta linha de importação.
 import { render, screen, fireEvent } from '@testing-library/react';
 import { OnboardingWizard } from '../onboarding-wizard';
 

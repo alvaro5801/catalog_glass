@@ -8,8 +8,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { ArrowRight, CheckCircle, X } from "lucide-react";
 import Image from "next/image";
-// ✅ CORREÇÃO: Agora o 'Link' está a ser utilizado abaixo.
-import Link from "next/link";
+import Link from "next/link"; // 1. A importação do 'Link' é necessária.
 
 type OnboardingData = {
   businessName: string;
@@ -73,7 +72,6 @@ export function OnboardingWizard() {
       <div className="w-full max-w-xl rounded-lg bg-background p-8 shadow-lg">
         
         {step === 1 && (
-          // ... (código do passo 1)
           <div>
             <h2 className="text-2xl font-bold">Bem-vindo! Vamos começar.</h2>
             <p className="text-muted-foreground mb-6">Qual é a identidade do seu negócio?</p>
@@ -93,7 +91,6 @@ export function OnboardingWizard() {
         )}
 
         {step === 2 && (
-            // ... (código do passo 2)
              <div>
                 <h2 className="text-2xl font-bold">Crie as suas Categorias</h2>
                 <p className="text-muted-foreground mb-6">Organize os seus produtos. Pode adicionar mais depois.</p>
@@ -117,7 +114,6 @@ export function OnboardingWizard() {
         )}
         
         {step === 3 && (
-            // ... (código do passo 3)
             <div>
                 <h2 className="text-2xl font-bold">Adicione o seu Primeiro Produto</h2>
                 <p className="text-muted-foreground mb-6">Vamos adicionar um item para começar.</p>
@@ -150,7 +146,7 @@ export function OnboardingWizard() {
                 <p className="text-muted-foreground mt-2">O seu catálogo foi criado com sucesso.</p>
                 <div className="my-6">
                     <p className="text-sm">O seu link público é:</p>
-                    {/* ✅ CORREÇÃO: Trocamos <a> por <Link> */}
+                    {/* 2. ✅ CORREÇÃO: A tag <a> foi substituída pelo componente <Link> */}
                     <Link href="#" className="font-mono text-primary hover:underline">
                         seusite.com/{data.businessName.toLowerCase().replace(/\s+/g, '-')}
                     </Link>
