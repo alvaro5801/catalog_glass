@@ -15,18 +15,19 @@ describe('Category Entity', () => {
   it('deve lançar um erro ao tentar criar uma categoria com um nome muito curto', () => {
     const invalidName = "a";
 
+    // Esperamos que a tentativa de criar a categoria com este nome LANCE UM ERRO.
+    // A função dentro de `expect(...).toThrow()` é o código que deve falhar.
     expect(() => new Category(2, invalidName)).toThrow("O nome da categoria deve ter pelo menos 2 caracteres.");
   });
 
   it('deve lançar um erro ao tentar criar uma categoria com um nome vazio', () => {
-    const emptyName = "  "; 
+    const emptyName = "  "; // Nome com apenas espaços
 
     expect(() => new Category(3, emptyName)).toThrow("O nome da categoria deve ter pelo menos 2 caracteres.");
   });
 
   it('deve lançar um erro ao tentar criar uma categoria sem nome', () => {
-    // ✅ CORREÇÃO: Alterado de @ts-ignore para @ts-expect-error
-    // @ts-expect-error - Ignoramos o erro do TypeScript aqui porque estamos a testar o comportamento em JavaScript
+    // @ts-ignore - Ignoramos o erro do TypeScript aqui porque estamos a testar o comportamento em JavaScript
     expect(() => new Category(4, null)).toThrow("O nome da categoria deve ter pelo menos 2 caracteres.");
   });
 

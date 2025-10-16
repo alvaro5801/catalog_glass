@@ -3,11 +3,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 // ✅ CORREÇÃO: A importação de 'cn' foi removida.
 import { LayoutDashboard, Package, FolderKanban, Settings } from "lucide-react";
 
-// Define a estrutura de cada link da navegação
 const navLinks = [
   { href: "/admin/dashboard", label: "Início", icon: LayoutDashboard },
   { href: "/admin/products", label: "Produtos", icon: Package },
@@ -16,6 +16,7 @@ const navLinks = [
 ];
 
 // Este componente interno renderiza a lista de links
+// Será usado tanto na barra lateral visível como no menu "hambúrguer"
 export function NavContent() {
   const pathname = usePathname();
 
@@ -39,7 +40,6 @@ export function NavContent() {
   );
 }
 
-// Este é o componente principal da Sidebar
 export function Sidebar() {
   return (
     <aside className="hidden md:block w-64 border-r bg-background">
