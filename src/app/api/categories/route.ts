@@ -2,7 +2,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // --- SIMULAÇÃO DA BASE DE DADOS ---
-// ✅ CORREÇÃO: Adicionamos 'export' para que a variável possa ser partilhada.
 export let categories: string[] = ["Bebidas", "Comidas", "Sobremesas"];
 
 // --- FUNÇÃO GET ---
@@ -29,10 +28,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // A reatribuição é segura porque estamos a usar 'let'
     categories = [...categories, name];
     return NextResponse.json(categories, { status: 201 });
-  } catch (error) {
+  } catch (_error) { // ✅ CORREÇÃO: Adicionamos um underscore para indicar que a variável 'error' não é usada.
     return NextResponse.json(
       { error: "Erro ao processar requisição." },
       { status: 500 }

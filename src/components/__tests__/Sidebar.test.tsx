@@ -1,11 +1,10 @@
 // src/components/__tests__/Sidebar.test.tsx
-
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { NavContent } from '../sidebar';
-import { axe } from 'jest-axe';
+import { axe, toHaveNoViolations } from 'jest-axe'; // ✅ CORREÇÃO: Importamos 'toHaveNoViolations' diretamente.
 
-expect.extend(require('jest-axe').toHaveNoViolations);
+expect.extend(toHaveNoViolations); // ✅ CORREÇÃO: Usamos a variável importada.
 
 const mockUsePathname = jest.fn();
 
@@ -23,8 +22,6 @@ describe('Sidebar Navigation', () => {
     mockUsePathname.mockReturnValue('/admin/dashboard');
     render(<NavContent />);
 
-    // ✅ CORREÇÃO: Colocamos TODAS as asserções de estado inicial dentro de um único waitFor.
-    // Isto garante que o teste espera que o componente estabilize completamente.
     await waitFor(() => {
       const inicioButton = screen.getByText('Início').closest('button');
       const produtosButton = screen.getByText('Produtos').closest('button');
@@ -38,7 +35,6 @@ describe('Sidebar Navigation', () => {
     mockUsePathname.mockReturnValue('/admin/products');
     render(<NavContent />);
 
-    // ✅ Aplicamos o mesmo padrão robusto aqui.
     await waitFor(() => {
       const produtosButton = screen.getByText('Produtos').closest('button');
       const inicioButton = screen.getByText('Início').closest('button');
@@ -52,7 +48,6 @@ describe('Sidebar Navigation', () => {
     mockUsePathname.mockReturnValue('/admin/alguma-outra-pagina');
     render(<NavContent />);
 
-    // ✅ E aqui também.
     await waitFor(() => {
       const inicioButton = screen.getByText('Início').closest('button');
       const produtosButton = screen.getByText('Produtos').closest('button');
