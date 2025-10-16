@@ -1,7 +1,7 @@
-// src/app/layout.tsx (versão simplificada)
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
+import { FavoritesProvider } from "@/contexts/favorites-context"; // 1. Importar o Provedor
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -22,7 +22,10 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${poppins.variable} scroll-smooth`}>
       <body className="min-h-screen flex flex-col font-sans antialiased">
-        {children}
+        {/* 2. Envolver toda a aplicação com o Provedor de Favoritos */}
+        <FavoritesProvider>
+          {children}
+        </FavoritesProvider>
       </body>
     </html>
   );

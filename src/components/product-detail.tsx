@@ -2,10 +2,10 @@
 "use client";
 
 import { useState } from "react";
-import type { Product } from "@/lib/types"; 
+import type { Product } from "@/lib/types";
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/button"; 
+import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
 interface ProductDetailProps {
@@ -13,13 +13,13 @@ interface ProductDetailProps {
 }
 
 type PriceTier = {
-    quantity: string;
-    price: number;
+  quantity: string;
+  price: number;
 };
 
 export function ProductDetail({ product }: ProductDetailProps) {
   const [activeImage, setActiveImage] = useState(product.images[0]);
-  
+
   const whatsappMessage = encodeURIComponent(
     `Olá! Vi o produto "${product.name}" no site e gostaria de mais informações.`
   );
@@ -49,13 +49,11 @@ export function ProductDetail({ product }: ProductDetailProps) {
               <button
                 key={image}
                 onClick={() => setActiveImage(image)}
-                className={`aspect-square bg-muted rounded-md overflow-hidden relative border-2 ${
-                  activeImage === image ? "border-primary" : "border-transparent"
-                }`}
+                className={`aspect-square bg-muted rounded-md overflow-hidden relative border-2 ${activeImage === image ? "border-primary" : "border-transparent"
+                  }`}
               >
                 <Image
                   src={image}
-                  // ✅ O 'alt' text único e numerado está correto aqui
                   alt={`${product.name} thumbnail ${index + 1}`}
                   fill
                   className="object-cover"
@@ -93,12 +91,12 @@ export function ProductDetail({ product }: ProductDetailProps) {
             <p className="text-sm text-muted-foreground mt-2">{product.priceInfo}</p>
           </div>
           <div className="mt-8">
-             <h2 className="text-2xl font-semibold mb-3">Especificações</h2>
-              <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                <li><strong>Material:</strong> {product.specifications.material}</li>
-                <li><strong>Capacidade:</strong> {product.specifications.capacidade}</li>
-                <li><strong>Dimensões:</strong> {product.specifications.dimensoes}</li>
-              </ul>
+            <h2 className="text-2xl font-semibold mb-3">Especificações</h2>
+            <ul className="list-disc list-inside text-muted-foreground space-y-1">
+              <li><strong>Material:</strong> {product.specifications.material}</li>
+              <li><strong>Capacidade:</strong> {product.specifications.capacidade}</li>
+              <li><strong>Dimensões:</strong> {product.specifications.dimensoes}</li>
+            </ul>
           </div>
           <a
             href={whatsappLink}

@@ -3,38 +3,41 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { CatalogContent } from '../catalog-content';
 import { products } from '@/data/products';
+import { FavoritesProvider } from '@/contexts/favorites-context'; // 1. Importar o Provedor
 
-// Mock do 'useSearchParams' do Next.js, pois ele não funciona fora de um contexto de navegação
+// Mock do 'useSearchParams' do Next.js
 jest.mock('next/navigation', () => ({
   useSearchParams: () => ({
     get: () => '',
   }),
 }));
 
+// Função auxiliar para renderizar com o provedor
+const renderWithProvider = (component: React.ReactElement) => {
+  return render(<FavoritesProvider>{component}</FavoritesProvider>);
+};
+
 describe('CatalogContent Component', () => {
 
   it('deve exibir todos os produtos inicialmente', () => {
-    render(<CatalogContent />);
-    // Verifica se o número de cards de produtos na tela é igual ao total de produtos
+    // 2. Usar a função auxiliar para renderizar
+    renderWithProvider(<CatalogContent />);
+
     const productCards = screen.getAllByRole('link', { name: /Valores/i });
     expect(productCards).toHaveLength(products.length);
   });
-  
+
   it('deve filtrar os produtos ao clicar numa categoria', () => {
-    render(<CatalogContent />);
-    
-    // 1. Encontra e clica no botão da categoria "Taças"
+    // 3. Usar a função auxiliar aqui também
+    renderWithProvider(<CatalogContent />);
+
     const categoryButton = screen.getByRole('button', { name: /Taças/i });
     fireEvent.click(categoryButton);
 
-    // 2. Conta quantos produtos da categoria "Taças" existem nos seus dados
     const tacasProductsCount = products.filter(p => p.category === 'Taças').length;
-
-    // 3. Verifica se o número de produtos exibidos na tela agora é igual a 'tacasProductsCount'
     const productCards = screen.getAllByRole('link', { name: /Valores/i });
     expect(productCards).toHaveLength(tacasProductsCount);
 
-    // 4. (Opcional) Garante que um produto de outra categoria NÃO está visível
     const copoElement = screen.queryByText(/Copo Long Drink/i);
     expect(copoElement).not.toBeInTheDocument();
   });
