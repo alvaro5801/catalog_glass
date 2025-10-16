@@ -1,13 +1,14 @@
 // src/app/api/categories/[name]/route.ts
 import { NextResponse, type NextRequest } from "next/server";
-import { categories } from "../route"; // Esta linha agora funciona perfeitamente
+import { categories } from "@/app/api/categories/data"; // ✅ Importa o array do módulo separado
 
 // --- FUNÇÃO DELETE ---
 export async function DELETE(
   request: NextRequest,
-  context: { params: { name: string } }
+  context: { params: Promise<{ name: string }> } // ✅ Tipagem compatível com Next 15
 ) {
-  const categoryToDelete = decodeURIComponent(context.params.name);
+  const { name } = await context.params; // ✅ Necessário "await" no Next 15
+  const categoryToDelete = decodeURIComponent(name);
   const initialLength = categories.length;
 
   const updatedCategories = categories.filter(
@@ -21,18 +22,20 @@ export async function DELETE(
     );
   }
 
+  // Atualiza o array global (simulação de banco)
   categories.length = 0;
   categories.push(...updatedCategories);
 
-  return NextResponse.json(categories);
+  return NextResponse.json(categories, { status: 200 });
 }
 
 // --- FUNÇÃO PUT ---
 export async function PUT(
   request: NextRequest,
-  context: { params: { name: string } }
+  context: { params: Promise<{ name: string }> } // ✅ Mesmo ajuste aqui
 ) {
-  const originalCategory = decodeURIComponent(context.params.name);
+  const { name } = await context.params;
+  const originalCategory = decodeURIComponent(name);
   const { newName } = await request.json();
 
   if (!newName || (categories.includes(newName) && newName !== originalCategory)) {
@@ -55,5 +58,5 @@ export async function PUT(
 
   categories[categoryIndex] = newName;
 
-  return NextResponse.json(categories);
+  return NextResponse.json(categories, { status: 200 });
 }
