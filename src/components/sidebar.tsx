@@ -3,9 +3,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
-import { Button } from "./ui/button";
 // ✅ CORREÇÃO: A importação de 'cn' foi removida.
+import { Button } from "./ui/button";
 import { LayoutDashboard, Package, FolderKanban, Settings } from "lucide-react";
 
 const navLinks = [
@@ -15,8 +14,6 @@ const navLinks = [
   { href: "/admin/settings", label: "Configurações", icon: Settings },
 ];
 
-// Este componente interno renderiza a lista de links
-// Será usado tanto na barra lateral visível como no menu "hambúrguer"
 export function NavContent() {
   const pathname = usePathname();
 
