@@ -1,26 +1,21 @@
 // src/app/api/categories/[name]/route.ts
-import { NextResponse } from 'next/server';
-// 1. MUDANÇA: Importar a lista de categorias do nosso novo ficheiro de rota
+import { NextResponse, type NextRequest } from 'next/server'; // ✅ CORREÇÃO: Importar NextRequest
 import { categories } from '../route';
-
-// A simulação local da base de dados foi removida.
 
 // --- FUNÇÃO DELETE ---
 export async function DELETE(
-  request: Request,
-  { params }: { params: { name: string } }
+  request: NextRequest, // ✅ CORREÇÃO: Usar NextRequest
+  context: { params: { name: string } } // ✅ CORREÇÃO: Usar a estrutura de contexto
 ) {
-  const categoryToDelete = decodeURIComponent(params.name);
+  const categoryToDelete = decodeURIComponent(context.params.name); // ✅ CORREÇÃO: Aceder a context.params
   const initialLength = categories.length;
-  
-  // 2. MUDANÇA: 'let' removido, agora modificamos a lista importada
+
   const updatedCategories = categories.filter(cat => cat !== categoryToDelete);
 
   if (updatedCategories.length === initialLength) {
     return NextResponse.json({ error: 'Categoria não encontrada.' }, { status: 404 });
   }
 
-  // Atualiza a lista original (simulando a escrita na base de dados)
   categories.length = 0;
   categories.push(...updatedCategories);
 
@@ -29,23 +24,23 @@ export async function DELETE(
 
 // --- FUNÇÃO PUT ---
 export async function PUT(
-  request: Request,
-  { params }: { params: { name: string } }
+  request: NextRequest, // ✅ CORREÇÃO: Usar NextRequest
+  context: { params: { name: string } } // ✅ CORREÇÃO: Usar a estrutura de contexto
 ) {
-    const originalCategory = decodeURIComponent(params.name);
-    const { newName } = await request.json();
+  const originalCategory = decodeURIComponent(context.params.name); // ✅ CORREÇÃO: Aceder a context.params
+  const { newName } = await request.json();
 
-    if (!newName || (categories.includes(newName) && newName !== originalCategory)) {
-        return NextResponse.json({ error: 'Novo nome inválido ou já existente.' }, { status: 400 });
-    }
+  if (!newName || (categories.includes(newName) && newName !== originalCategory)) {
+    return NextResponse.json({ error: 'Novo nome inválido ou já existente.' }, { status: 400 });
+  }
 
-    const categoryIndex = categories.findIndex(cat => cat === originalCategory);
+  const categoryIndex = categories.findIndex(cat => cat === originalCategory);
 
-    if (categoryIndex === -1) {
-        return NextResponse.json({ error: 'Categoria original não encontrada.' }, { status: 404 });
-    }
+  if (categoryIndex === -1) {
+    return NextResponse.json({ error: 'Categoria original não encontrada.' }, { status: 404 });
+  }
 
-    categories[categoryIndex] = newName;
+  categories[categoryIndex] = newName;
 
-    return NextResponse.json(categories);
+  return NextResponse.json(categories);
 }
