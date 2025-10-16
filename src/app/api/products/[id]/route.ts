@@ -5,10 +5,11 @@ import type { Product } from '@/lib/types';
 
 // --- FUNÇÃO GET ---
 export async function GET(
-  request: NextRequest, // ✅ CORREÇÃO: Usar NextRequest
-  context: { params: { id: string } } // ✅ CORREÇÃO: Usar a estrutura de 'context'
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> } // ✅ Tipagem compatível com Next 15
 ) {
-  const productId = parseInt(context.params.id, 10); // Aceder via context.params
+  const { id } = await context.params; // ✅ Necessário "await" no Next 15
+  const productId = parseInt(id, 10);
   const product = products.find(p => p.id === productId);
 
   if (!product) {
@@ -21,10 +22,11 @@ export async function GET(
 
 // --- FUNÇÃO PUT ---
 export async function PUT(
-  request: NextRequest, // ✅ CORREÇÃO: Usar NextRequest
-  context: { params: { id: string } } // ✅ CORREÇÃO: Usar a estrutura de 'context'
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> } // ✅ Mesmo ajuste aqui
 ) {
-  const productId = parseInt(context.params.id, 10); // Aceder via context.params
+  const { id } = await context.params;
+  const productId = parseInt(id, 10);
   const productData: Partial<Omit<Product, 'id'>> = await request.json();
 
   const productIndex = products.findIndex(p => p.id === productId);
@@ -40,10 +42,11 @@ export async function PUT(
 
 // --- FUNÇÃO DELETE ---
 export async function DELETE(
-  request: NextRequest, // ✅ CORREÇÃO: Usar NextRequest
-  context: { params: { id: string } } // ✅ CORREÇÃO: Usar a estrutura de 'context'
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> } // ✅ E aqui também
 ) {
-  const productId = parseInt(context.params.id, 10); // Aceder via context.params
+  const { id } = await context.params;
+  const productId = parseInt(id, 10);
   const productIndex = products.findIndex(p => p.id === productId);
 
   if (productIndex === -1) {
