@@ -1,10 +1,11 @@
+// src/components/__tests__/ProductCard.test.tsx
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ProductCard } from '../product-card';
 import { products } from '@/data/products';
-import { FavoritesProvider } from '@/contexts/favorites-context'; // 1. Importar o Provedor
+import { FavoritesProvider } from '@/contexts/favorites-context';
 
-// Simulação do localStorage para controlar o estado inicial
+// --- Simulação do localStorage (sem alterações) ---
 let mockLocalStorage: { [key: string]: string } = {};
 Object.defineProperty(window, 'localStorage', {
   value: {
@@ -15,14 +16,16 @@ Object.defineProperty(window, 'localStorage', {
   writable: true,
 });
 
-// Simular o componente Link do Next.js (continua igual)
+// ✅ CORREÇÃO: A definição do MockLink foi movida para DENTRO do jest.mock
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode, href: string }) => {
+  const MockLink = ({ children, href }: { children: React.ReactNode, href: string }) => {
     return <a href={href}>{children}</a>;
   };
+  // Adicionamos o displayName aqui para boas práticas de depuração
+  MockLink.displayName = 'MockLink';
+  return MockLink;
 });
 
-// Helper para renderizar componentes dentro do Provedor
 const renderWithProvider = (component: React.ReactElement) => {
   return render(<FavoritesProvider>{component}</FavoritesProvider>);
 };
@@ -30,7 +33,7 @@ const renderWithProvider = (component: React.ReactElement) => {
 describe('ProductCard Component (com Contexto)', () => {
 
   beforeEach(() => {
-    localStorage.clear(); // Limpa o estado antes de cada teste
+    localStorage.clear();
   });
 
   const product = products[0];
@@ -45,7 +48,6 @@ describe('ProductCard Component (com Contexto)', () => {
   });
 
   it('deve exibir o coração preenchido se o produto for um favorito', () => {
-    // Define o estado inicial como se o produto já estivesse favoritado
     localStorage.setItem('favoriteProducts', JSON.stringify([product.id]));
 
     renderWithProvider(<ProductCard product={product} />);
@@ -59,18 +61,14 @@ describe('ProductCard Component (com Contexto)', () => {
   it('deve alternar o estado de favorito ao clicar no botão', () => {
     renderWithProvider(<ProductCard product={product} />);
 
-    // 1. Clica para favoritar
     const favoriteButton = screen.getByLabelText(/Adicionar aos favoritos/i);
     fireEvent.click(favoriteButton);
 
-    // 2. Verifica se o ícone e o texto mudaram
     const unfavoriteButton = screen.getByLabelText(/Remover dos favoritos/i);
     expect(unfavoriteButton.querySelector('svg')).toHaveClass('fill-red-500');
 
-    // 3. Clica para desfavoritar
     fireEvent.click(unfavoriteButton);
 
-    // 4. Verifica se voltou ao estado original
     const newFavoriteButton = screen.getByLabelText(/Adicionar aos favoritos/i);
     expect(newFavoriteButton.querySelector('svg')).not.toHaveClass('fill-red-500');
   });

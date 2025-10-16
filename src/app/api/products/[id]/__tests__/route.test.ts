@@ -36,7 +36,8 @@ describe('API Route: /api/products/[id]', () => {
       // ✅ CORREÇÃO: Envolvemos os parâmetros numa Promise
       const context = { params: Promise.resolve({ id: '99' }) };
       const response = await GET(request as NextRequest, context);
-      const body = await response.json();
+      // ✅ CORREÇÃO: A variável 'body' foi removida, pois não era utilizada.
+      await response.json();
       expect(response.status).toBe(404);
     });
   });

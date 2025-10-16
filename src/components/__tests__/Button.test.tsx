@@ -2,11 +2,10 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { Button } from '../ui/button';
-import { axe } from 'jest-axe'; // 1. Importar a biblioteca axe
+import { axe, toHaveNoViolations } from 'jest-axe'; // 1. Importar a biblioteca axe e a extensão
 
-// É uma boa prática estender o 'expect' do Jest para que ele entenda a nova verificação
-// Isto melhora as mensagens de erro caso um teste de acessibilidade falhe.
-expect.extend(require('jest-axe').toHaveNoViolations);
+// ✅ CORREÇÃO: A extensão agora é importada diretamente.
+expect.extend(toHaveNoViolations);
 
 describe('Button Component', () => {
   it('deve renderizar o botão com o texto correto', () => {
@@ -15,19 +14,9 @@ describe('Button Component', () => {
     expect(buttonElement).toBeInTheDocument();
   });
 
-  // ✅ NOVO TESTE DE ACESSIBILIDADE ADICIONADO AQUI
   it('não deve ter violações de acessibilidade', async () => {
-    // 1. Renderizamos o componente que queremos testar.
-    // A função 'render' retorna, entre outras coisas, o 'container' do nosso componente.
     const { container } = render(<Button>Botão Acessível</Button>);
-
-    // 2. Passamos o 'container' para a função 'axe'.
-    // Ela vai analisar o HTML renderizado em busca de problemas.
     const results = await axe(container);
-
-    // 3. Esta é a asserção mágica.
-    // Ela verifica se 'results' não contém nenhuma violação de acessibilidade.
-    // Se encontrar algum problema, o teste falhará com uma descrição clara do que corrigir.
     expect(results).toHaveNoViolations();
   });
 });
