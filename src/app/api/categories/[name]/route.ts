@@ -1,51 +1,62 @@
 // src/app/api/categories/[name]/route.ts
-import { NextResponse } from 'next/server';
-// 1. MUDANÇA: Importar a lista de categorias do nosso novo ficheiro de rota
-import { categories } from '../route';
-
-// A simulação local da base de dados foi removida.
+import { NextResponse, type NextRequest } from "next/server";
+import { categories } from "@/app/api/categories/data"; // ✅ Importa o array do módulo separado
 
 // --- FUNÇÃO DELETE ---
 export async function DELETE(
-  request: Request,
-  { params }: { params: { name: string } }
+  request: NextRequest,
+  context: { params: Promise<{ name: string }> } // ✅ Tipagem compatível com Next 15
 ) {
-  const categoryToDelete = decodeURIComponent(params.name);
+  const { name } = await context.params; // ✅ Necessário "await" no Next 15
+  const categoryToDelete = decodeURIComponent(name);
   const initialLength = categories.length;
-  
-  // 2. MUDANÇA: 'let' removido, agora modificamos a lista importada
-  const updatedCategories = categories.filter(cat => cat !== categoryToDelete);
+
+  const updatedCategories = categories.filter(
+    (cat: string) => cat !== categoryToDelete
+  );
 
   if (updatedCategories.length === initialLength) {
-    return NextResponse.json({ error: 'Categoria não encontrada.' }, { status: 404 });
+    return NextResponse.json(
+      { error: "Categoria não encontrada." },
+      { status: 404 }
+    );
   }
 
-  // Atualiza a lista original (simulando a escrita na base de dados)
+  // Atualiza o array global (simulação de banco)
   categories.length = 0;
   categories.push(...updatedCategories);
 
-  return NextResponse.json(categories);
+  return NextResponse.json(categories, { status: 200 });
 }
 
 // --- FUNÇÃO PUT ---
 export async function PUT(
-  request: Request,
-  { params }: { params: { name: string } }
+  request: NextRequest,
+  context: { params: Promise<{ name: string }> } // ✅ Mesmo ajuste aqui
 ) {
-    const originalCategory = decodeURIComponent(params.name);
-    const { newName } = await request.json();
+  const { name } = await context.params;
+  const originalCategory = decodeURIComponent(name);
+  const { newName } = await request.json();
 
-    if (!newName || (categories.includes(newName) && newName !== originalCategory)) {
-        return NextResponse.json({ error: 'Novo nome inválido ou já existente.' }, { status: 400 });
-    }
+  if (!newName || (categories.includes(newName) && newName !== originalCategory)) {
+    return NextResponse.json(
+      { error: "Novo nome inválido ou já existente." },
+      { status: 400 }
+    );
+  }
 
-    const categoryIndex = categories.findIndex(cat => cat === originalCategory);
+  const categoryIndex = categories.findIndex(
+    (cat: string) => cat === originalCategory
+  );
 
-    if (categoryIndex === -1) {
-        return NextResponse.json({ error: 'Categoria original não encontrada.' }, { status: 404 });
-    }
+  if (categoryIndex === -1) {
+    return NextResponse.json(
+      { error: "Categoria original não encontrada." },
+      { status: 404 }
+    );
+  }
 
-    categories[categoryIndex] = newName;
+  categories[categoryIndex] = newName;
 
-    return NextResponse.json(categories);
+  return NextResponse.json(categories, { status: 200 });
 }

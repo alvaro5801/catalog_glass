@@ -1,18 +1,15 @@
 // src/app/api/products/[id]/route.ts
-import { NextResponse } from 'next/server';
-import { products } from '@/data/products'; // 1. MUDANÇA: Importar a lista de produtos real
-import type { Product } from '@/lib/types'; // 2. MUDANÇA: Importar o tipo Product
+import { NextResponse, type NextRequest } from 'next/server';
+import { products } from '@/data/products';
+import type { Product } from '@/lib/types';
 
-// 3. MUDANÇA: A simulação da base de dados local foi removida.
-//    Agora usamos a variável 'products' importada.
-
-// --- FUNÇÃO GET (BÓNUS) ---
-// Devolve um único produto pelo seu ID
+// --- FUNÇÃO GET ---
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> } // ✅ Tipagem compatível com Next 15
 ) {
-  const productId = parseInt(params.id, 10);
+  const { id } = await context.params; // ✅ Necessário "await" no Next 15
+  const productId = parseInt(id, 10);
   const product = products.find(p => p.id === productId);
 
   if (!product) {
@@ -24,12 +21,12 @@ export async function GET(
 
 
 // --- FUNÇÃO PUT ---
-// Atualiza um produto existente
 export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> } // ✅ Mesmo ajuste aqui
 ) {
-  const productId = parseInt(params.id, 10);
+  const { id } = await context.params;
+  const productId = parseInt(id, 10);
   const productData: Partial<Omit<Product, 'id'>> = await request.json();
 
   const productIndex = products.findIndex(p => p.id === productId);
@@ -38,27 +35,25 @@ export async function PUT(
     return NextResponse.json({ error: 'Produto não encontrado.' }, { status: 404 });
   }
 
-  // Atualiza o produto na lista importada
   products[productIndex] = { ...products[productIndex], ...productData };
 
   return NextResponse.json(products[productIndex]);
 }
 
 // --- FUNÇÃO DELETE ---
-// Apaga um produto
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> } // ✅ E aqui também
 ) {
-  const productId = parseInt(params.id, 10);
+  const { id } = await context.params;
+  const productId = parseInt(id, 10);
   const productIndex = products.findIndex(p => p.id === productId);
 
   if (productIndex === -1) {
     return NextResponse.json({ error: 'Produto não encontrado.' }, { status: 404 });
   }
 
-  // Remove o produto da lista importada
   products.splice(productIndex, 1);
 
-  return new Response(null, { status: 204 }); // Resposta de sucesso sem conteúdo
+  return new Response(null, { status: 204 });
 }
