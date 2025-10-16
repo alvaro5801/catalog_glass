@@ -1,14 +1,14 @@
 // src/app/api/products/[id]/route.ts
-import { NextResponse, type NextRequest } from 'next/server'; // ✅ CORREÇÃO: Importar NextRequest
+import { NextResponse, type NextRequest } from 'next/server';
 import { products } from '@/data/products';
 import type { Product } from '@/lib/types';
 
 // --- FUNÇÃO GET ---
 export async function GET(
   request: NextRequest, // ✅ CORREÇÃO: Usar NextRequest
-  context: { params: { id: string } } // ✅ CORREÇÃO: Usar a estrutura de contexto
+  context: { params: { id: string } } // ✅ CORREÇÃO: Usar a estrutura de 'context'
 ) {
-  const productId = parseInt(context.params.id, 10); // ✅ CORREÇÃO: Aceder a context.params
+  const productId = parseInt(context.params.id, 10); // Aceder via context.params
   const product = products.find(p => p.id === productId);
 
   if (!product) {
@@ -22,9 +22,9 @@ export async function GET(
 // --- FUNÇÃO PUT ---
 export async function PUT(
   request: NextRequest, // ✅ CORREÇÃO: Usar NextRequest
-  context: { params: { id: string } } // ✅ CORREÇÃO: Usar a estrutura de contexto
+  context: { params: { id: string } } // ✅ CORREÇÃO: Usar a estrutura de 'context'
 ) {
-  const productId = parseInt(context.params.id, 10); // ✅ CORREÇÃO: Aceder a context.params
+  const productId = parseInt(context.params.id, 10); // Aceder via context.params
   const productData: Partial<Omit<Product, 'id'>> = await request.json();
 
   const productIndex = products.findIndex(p => p.id === productId);
@@ -41,9 +41,9 @@ export async function PUT(
 // --- FUNÇÃO DELETE ---
 export async function DELETE(
   request: NextRequest, // ✅ CORREÇÃO: Usar NextRequest
-  context: { params: { id: string } } // ✅ CORREÇÃO: Usar a estrutura de contexto
+  context: { params: { id: string } } // ✅ CORREÇÃO: Usar a estrutura de 'context'
 ) {
-  const productId = parseInt(context.params.id, 10); // ✅ CORREÇÃO: Aceder a context.params
+  const productId = parseInt(context.params.id, 10); // Aceder via context.params
   const productIndex = products.findIndex(p => p.id === productId);
 
   if (productIndex === -1) {

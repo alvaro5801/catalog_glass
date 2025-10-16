@@ -1,13 +1,13 @@
 // src/app/api/categories/[name]/route.ts
-import { NextResponse, type NextRequest } from 'next/server'; // ✅ CORREÇÃO: Importar NextRequest
+import { NextResponse, type NextRequest } from 'next/server';
 import { categories } from '../route';
 
 // --- FUNÇÃO DELETE ---
 export async function DELETE(
-  request: NextRequest, // ✅ CORREÇÃO: Usar NextRequest
-  context: { params: { name: string } } // ✅ CORREÇÃO: Usar a estrutura de contexto
+  request: NextRequest, // ✅ CORREÇÃO: Usar NextRequest em vez de Request
+  context: { params: { name: string } } // ✅ CORREÇÃO: Usar a estrutura de 'context'
 ) {
-  const categoryToDelete = decodeURIComponent(context.params.name); // ✅ CORREÇÃO: Aceder a context.params
+  const categoryToDelete = decodeURIComponent(context.params.name); // Aceder via context.params
   const initialLength = categories.length;
 
   const updatedCategories = categories.filter(cat => cat !== categoryToDelete);
@@ -16,6 +16,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Categoria não encontrada.' }, { status: 404 });
   }
 
+  // Limpa o array original e preenche com os novos dados para simular a atualização
   categories.length = 0;
   categories.push(...updatedCategories);
 
@@ -25,9 +26,9 @@ export async function DELETE(
 // --- FUNÇÃO PUT ---
 export async function PUT(
   request: NextRequest, // ✅ CORREÇÃO: Usar NextRequest
-  context: { params: { name: string } } // ✅ CORREÇÃO: Usar a estrutura de contexto
+  context: { params: { name: string } } // ✅ CORREÇÃO: Usar a estrutura de 'context'
 ) {
-  const originalCategory = decodeURIComponent(context.params.name); // ✅ CORREÇÃO: Aceder a context.params
+  const originalCategory = decodeURIComponent(context.params.name); // Aceder via context.params
   const { newName } = await request.json();
 
   if (!newName || (categories.includes(newName) && newName !== originalCategory)) {
