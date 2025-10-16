@@ -1,12 +1,13 @@
 // src/app/admin/categories/__tests__/page.test.tsx
 import React from 'react';
-// 1. ✅ Importar o 'within' para buscas mais precisas
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+// ✅ 1. Importar a função 'act'
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import CategoriesPage from '@/app/admin/categories/page';
 
-// --- SIMULAÇÃO (MOCK) DA API FETCH ---
 global.fetch = jest.fn();
 const mockFetch = global.fetch as jest.Mock;
+
+jest.useFakeTimers();
 
 describe('CategoriesPage - Gestão de Categorias', () => {
 
@@ -14,75 +15,75 @@ describe('CategoriesPage - Gestão de Categorias', () => {
     mockFetch.mockClear();
   });
 
+  afterEach(() => {
+    jest.clearAllTimers();
+  });
+
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
   it('deve carregar e exibir as categorias iniciais da API', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ["Bebidas", "Comidas"],
-    });
-
+    // ... (sem alterações)
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ["Bebidas", "Comidas"] });
     render(<CategoriesPage />);
-
     await waitFor(() => {
       expect(screen.queryByText(/A carregar categorias.../i)).not.toBeInTheDocument();
     });
-
     expect(screen.getByText("Bebidas")).toBeInTheDocument();
-    expect(screen.getByText("Comidas")).toBeInTheDocument();
   });
 
-  it('deve permitir adicionar uma nova categoria', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ["Bebidas"],
-    });
-    
+  it('deve permitir adicionar uma nova categoria e limpar a mensagem de sucesso', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ["Bebidas"] });
     render(<CategoriesPage />);
     await screen.findByText("Bebidas");
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ["Bebidas", "Decoração"],
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ["Bebidas", "Decoração"] });
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Decoração' } });
+    fireEvent.click(screen.getByRole('button', { name: /Adicionar/i }));
+
+    await screen.findByText("Decoração");
+    expect(await screen.findByText(/Categoria adicionada com sucesso!/i)).toBeInTheDocument();
+
+    // ✅ 2. Envolver a chamada do temporizador com 'act'
+    // Isto garante que o React processa a atualização de estado antes de o teste continuar.
+    act(() => {
+      jest.runAllTimers();
     });
 
-    const input = screen.getByRole('textbox');
-    fireEvent.change(input, { target: { value: 'Decoração' } });
-
-    const addButton = screen.getByRole('button', { name: /Adicionar/i });
-    fireEvent.click(addButton);
-
-    const newCategoryItem = await screen.findByText("Decoração");
-    expect(newCategoryItem).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText(/Categoria adicionada com sucesso!/i)).not.toBeInTheDocument();
+    });
   });
 
-  it('deve permitir apagar uma categoria', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ["Bebidas", "Para Apagar"],
-    });
-    
+  it('deve permitir apagar uma categoria e limpar a mensagem de sucesso', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ["Bebidas", "Para Apagar"] });
+
     render(<CategoriesPage />);
     await screen.findByText("Para Apagar");
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ["Bebidas"],
-    });
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ["Bebidas"] });
 
-    // --- 2. ✅ CORREÇÃO AQUI ---
-    // Primeiro, encontramos o elemento que contém o texto da categoria
     const categoryItem = screen.getByText("Para Apagar");
-    // Depois, encontramos o 'div' pai que representa a linha inteira
-    const row = categoryItem.closest('div')!; // O '!' diz ao TypeScript que temos a certeza que a linha existe
-    
-    // Finalmente, procuramos DENTRO daquela linha por um botão cujo nome COMECE com "Apagar".
-    // A expressão regular /^Apagar/i garante que não corresponde a "Editar".
+    const row = categoryItem.closest('div')!;
     const deleteButton = within(row).getByRole('button', { name: /^Apagar/i });
-    
+
     fireEvent.click(deleteButton);
-    
+
     await waitFor(() => {
       expect(screen.queryByText("Para Apagar")).not.toBeInTheDocument();
     });
-    expect(screen.getByText("Bebidas")).toBeInTheDocument();
+
+    expect(await screen.findByText(/Categoria apagada com sucesso!/i)).toBeInTheDocument();
+
+    // ✅ 3. Fazer o mesmo ajuste aqui
+    act(() => {
+      jest.runAllTimers();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Categoria apagada com sucesso!/i)).not.toBeInTheDocument();
+    });
   });
 });

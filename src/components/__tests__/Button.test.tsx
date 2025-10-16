@@ -1,17 +1,22 @@
 // src/components/__tests__/Button.test.tsx
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { Button } from '../ui/button'; // Aponta para o seu componente de botão
+import { Button } from '../ui/button';
+import { axe, toHaveNoViolations } from 'jest-axe'; // 1. Importar a biblioteca axe e a extensão
+
+// ✅ CORREÇÃO: A extensão agora é importada diretamente.
+expect.extend(toHaveNoViolations);
 
 describe('Button Component', () => {
   it('deve renderizar o botão com o texto correto', () => {
-    // 1. Renderiza o componente
     render(<Button>Clique-me</Button>);
-
-    // 2. Procura por um elemento com a "role" de botão e o nome "Clique-me"
     const buttonElement = screen.getByRole('button', { name: /Clique-me/i });
-
-    // 3. Afirma que o elemento foi encontrado no documento
     expect(buttonElement).toBeInTheDocument();
+  });
+
+  it('não deve ter violações de acessibilidade', async () => {
+    const { container } = render(<Button>Botão Acessível</Button>);
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

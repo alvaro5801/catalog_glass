@@ -14,16 +14,16 @@ export class Product {
       throw new Error("O nome do produto deve ter pelo menos 3 caracteres.");
     }
 
-    // Regra 2: A tabela de preços não pode estar vazia
+    // ✅ NOVA REGRA: A tabela de preços não pode estar vazia
     if (!data.priceTable || data.priceTable.length === 0) {
-        throw new Error("O produto deve ter uma tabela de preços.");
+      throw new Error("O produto deve ter uma tabela de preços.");
     }
 
     // Regra 3: Nenhum preço na tabela pode ser negativo
     if (data.priceTable.some(p => p.price < 0)) {
-        throw new Error("O preço de um produto não pode ser negativo.");
+      throw new Error("O preço de um produto não pode ser negativo.");
     }
-    
+
     this.id = data.id;
     this.name = data.name;
     this.category = data.category;
@@ -32,6 +32,8 @@ export class Product {
 
   // Lógica de Negócio: Obter o menor preço do produto
   get startingPrice(): number {
+    // Adicionamos uma segurança para o caso de a tabela estar vazia (embora a regra acima já proteja)
+    if (this.priceTable.length === 0) return 0;
     return Math.min(...this.priceTable.map(p => p.price));
   }
 }

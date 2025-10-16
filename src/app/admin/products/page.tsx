@@ -5,25 +5,20 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Trash2, Edit } from "lucide-react";
+import { PlusCircle, Trash2, Edit, Star } from "lucide-react";
 import Image from "next/image";
+import type { Product as ProductType } from "@/lib/types";
 
-// --- Tipos de Dados ---
 type Category = string;
-type Product = {
-    id: number;
-    name: string;
-    category: Category;
-    price: number;
-    image: string;
-};
+// ✅ CORREÇÃO: Definimos um tipo para os dados do formulário em vez de usar 'any'.
+type ProductFormData = { name: string; category: string; price: number; image: string };
 
 // --- Componente: Formulário do Produto (no Modal) ---
-function ProductForm({ product, categories, onSave, onCancel }: { product: Product | null, categories: Category[], onSave: (data: Omit<Product, 'id'>) => void, onCancel: () => void }) {
-    const [formData, setFormData] = useState({
+function ProductForm({ product, categories, onSave, onCancel }: { product: ProductType | null, categories: Category[], onSave: (data: ProductFormData) => void, onCancel: () => void }) {
+    const [formData, setFormData] = useState<ProductFormData>({
         name: '',
         category: '',
         price: 0,
@@ -34,8 +29,8 @@ function ProductForm({ product, categories, onSave, onCancel }: { product: Produ
         setFormData({
             name: product?.name || "",
             category: product?.category || categories[0] || "",
-            price: product?.price || 0,
-            image: product?.image || "/images/placeholder.png",
+            price: product?.priceTable[0]?.price || 0,
+            image: product?.images[0] || "/images/placeholder.png",
         });
     }, [product, categories]);
 
@@ -48,6 +43,9 @@ function ProductForm({ product, categories, onSave, onCancel }: { product: Produ
         <DialogContent>
             <DialogHeader>
                 <DialogTitle>{product ? "Editar Produto" : "Adicionar Novo Produto"}</DialogTitle>
+                <DialogDescription>
+                    {product ? "Altere as informações abaixo para atualizar o produto." : "Preencha as informações abaixo para criar um novo produto."}
+                </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div><Label htmlFor="name">Nome do Produto</Label><Input id="name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required /></div>
@@ -62,11 +60,11 @@ function ProductForm({ product, categories, onSave, onCancel }: { product: Produ
 
 // --- Componente Principal da Página de Produtos ---
 export default function ProductsPage() {
-    const [products, setProducts] = useState<Product[]>([]);
+    const [products, setProducts] = useState<ProductType[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+    const [editingProduct, setEditingProduct] = useState<ProductType | null>(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -89,7 +87,29 @@ export default function ProductsPage() {
         fetchData();
     }, []);
 
-    const handleEditClick = (product: Product) => { setEditingProduct(product); setIsDialogOpen(true); };
+    const handleToggleFeatured = async (productId: number, currentStatus: boolean) => {
+        setProducts(prevProducts =>
+            prevProducts.map(p =>
+                p.id === productId ? { ...p, isFeatured: !currentStatus } : p
+            )
+        );
+        try {
+            await fetch(`/api/products/${productId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ isFeatured: !currentStatus }),
+            });
+        } catch (error) {
+            console.error("Erro ao marcar como destaque:", error);
+            setProducts(prevProducts =>
+                prevProducts.map(p =>
+                    p.id === productId ? { ...p, isFeatured: currentStatus } : p
+                )
+            );
+        }
+    };
+
+    const handleEditClick = (product: ProductType) => { setEditingProduct(product); setIsDialogOpen(true); };
     const handleAddNewClick = () => { setEditingProduct(null); setIsDialogOpen(true); };
 
     const handleDeleteProduct = async (productId: number) => {
@@ -102,16 +122,30 @@ export default function ProductsPage() {
         }
     };
 
-    const handleSaveProduct = async (productData: Omit<Product, 'id'>) => {
+    const handleSaveProduct = async (formData: ProductFormData) => {
         try {
             const isEditing = !!editingProduct;
+            const productPayload = {
+                ...(editingProduct || {}),
+                name: formData.name,
+                category: formData.category,
+                images: [formData.image || '/images/placeholder.png'],
+                priceTable: [{ quantity: '1 unidade', price: formData.price || 0 }],
+                ...(!isEditing && {
+                    slug: formData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, ''),
+                    shortDescription: 'Descrição curta a ser preenchida.',
+                    description: 'Descrição completa a ser preenchida.',
+                    specifications: { material: 'N/A', capacidade: 'N/A', dimensoes: 'N/A' },
+                    priceInfo: 'Informação de preço a ser preenchida.'
+                })
+            };
             const url = isEditing ? `/api/products/${editingProduct.id}` : '/api/products';
             const method = isEditing ? 'PUT' : 'POST';
 
             const response = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(productData),
+                body: JSON.stringify(productPayload),
             });
 
             if (!response.ok) throw new Error('Falha ao salvar produto');
@@ -140,18 +174,27 @@ export default function ProductsPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Imagem</TableHead><TableHead>Nome</TableHead><TableHead>Categoria</TableHead><TableHead>Preço</TableHead><TableHead className="text-right">Ações</TableHead>
+                            <TableHead className="w-[60px]">Destaque</TableHead>
+                            <TableHead>Imagem</TableHead>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>Categoria</TableHead>
+                            <TableHead>Preço</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {products.map(product => (
                             <TableRow key={product.id}>
-                                <TableCell><Image src={product.image || '/images/placeholder.png'} alt={product.name} width={40} height={40} className="rounded-md object-cover" /></TableCell>
+                                <TableCell>
+                                    <Button variant="ghost" size="icon" onClick={() => handleToggleFeatured(product.id, !!product.isFeatured)} aria-label={product.isFeatured ? `Remover ${product.name} dos destaques` : `Adicionar ${product.name} aos destaques`}>
+                                        <Star className={`h-5 w-5 transition-colors ${product.isFeatured ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 hover:text-gray-400'}`} />
+                                    </Button>
+                                </TableCell>
+                                <TableCell><Image src={product.images?.[0] || '/images/placeholder.png'} alt={product.name} width={40} height={40} className="rounded-md object-cover" /></TableCell>
                                 <TableCell className="font-medium">{product.name}</TableCell>
                                 <TableCell>{product.category}</TableCell>
-                                <TableCell>R$ {product.price.toFixed(2)}</TableCell>
+                                <TableCell>R$ {product.priceTable?.[0]?.price.toFixed(2).replace('.', ',') || '0,00'}</TableCell>
                                 <TableCell className="text-right">
-                                    {/* ✅ CORREÇÃO DE ACESSIBILIDADE ABAIXO */}
                                     <Button variant="outline" size="sm" onClick={() => handleEditClick(product)} className="mr-2" aria-label={`Editar ${product.name}`}><Edit className="h-4 w-4" /></Button>
                                     <Button variant="destructive" size="sm" onClick={() => handleDeleteProduct(product.id)} aria-label={`Apagar ${product.name}`}><Trash2 className="h-4 w-4" /></Button>
                                 </TableCell>
