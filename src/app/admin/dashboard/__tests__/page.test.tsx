@@ -1,5 +1,5 @@
 // src/app/admin/dashboard/__tests__/page.test.tsx
-import React from 'react';
+// ✅ CORREÇÃO: A importação do React foi removida porque não estava a ser utilizada.
 import { render, screen } from '@testing-library/react';
 import DashboardPage from '../page';
 
@@ -73,8 +73,6 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Total de Produtos')).toBeInTheDocument();
     expect(screen.getByText('Total de Categorias')).toBeInTheDocument();
 
-    // ✅ CORREÇÃO: Usamos 'getAllByText' para encontrar todos os elementos com o texto "0"
-    // e verificamos se encontrámos exatamente 2 (um para cada cartão).
     const zeroElements = screen.getAllByText('0');
     expect(zeroElements).toHaveLength(2);
   });

@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
 // Adiciona o prisma ao objeto global do Node.js para evitar múltiplas
 // instâncias do Prisma Client em ambiente de desenvolvimento.
 declare global {
-  // eslint-disable-next-line no-var
+  // ✅ CORREÇÃO: A diretiva eslint-disable foi removida porque não era mais necessária.
   var prisma: PrismaClient | undefined;
 }
 

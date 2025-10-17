@@ -6,7 +6,12 @@ import { useSearchParams } from "next/navigation";
 import { ProductCard } from "../../components/product-card";
 import { Button } from "../../components/ui/button";
 import type { Product } from "@/lib/types"; // Nosso tipo de frontend
-import type { Category as PrismaCategory } from "@prisma/client"; // Tipo do Prisma
+import type { Product as PrismaProduct, Category as PrismaCategory, Specification, PriceTier } from "@prisma/client"; // Tipos do Prisma
+
+type ProductFromApi = PrismaProduct & {
+  specifications: Specification | null;
+  priceTable: PriceTier[];
+};
 
 export function CatalogContent() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -16,25 +21,32 @@ export function CatalogContent() {
   const [activeCategory, setActiveCategory] = useState("Todos");
   const searchParams = useSearchParams();
 
-  // ✅ ALTERAÇÃO: Usar useEffect para buscar dados reais da API
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
         const [productsRes, categoriesRes] = await Promise.all([
-          fetch('/api/products'), // Busca da nossa nova API de produtos
-          fetch('/api/categories') // Busca da nossa nova API de categorias
+          fetch('/api/products'),
+          fetch('/api/categories')
         ]);
 
         if (!productsRes.ok || !categoriesRes.ok) {
           throw new Error("Falha ao carregar os dados do catálogo.");
         }
 
-        const productsData = await productsRes.json();
+        const productsData: ProductFromApi[] = await productsRes.json();
         const categoriesData: PrismaCategory[] = await categoriesRes.json();
 
-        // Mapear os dados para o formato que o frontend espera
-        const formattedProducts = productsData.map((p: any) => ({ ...p, category: p.categoryId }));
+        // ✅ CORREÇÃO AQUI:
+        // Verificamos se 'p.specifications' existe. Se não existir (for null),
+        // criamos um objeto de especificações com valores padrão.
+        // Isto garante que o objeto final corresponde sempre ao tipo 'Product'.
+        const formattedProducts = productsData.map((p: ProductFromApi) => ({
+          ...p,
+          category: p.categoryId,
+          specifications: p.specifications ?? { material: '', capacidade: '', dimensoes: '' },
+        }));
+
         const categoryNames = categoriesData.map((c) => c.name);
 
         setProducts(formattedProducts);
@@ -48,8 +60,6 @@ export function CatalogContent() {
     };
     fetchData();
   }, []);
-
-  // O resto do componente continua igual...
 
   useEffect(() => {
     const categoryFromURL = searchParams.get("categoria");
@@ -65,7 +75,6 @@ export function CatalogContent() {
     if (activeCategory === "Todos") {
       return products;
     }
-    // Lembre-se que o 'category' no nosso tipo 'Product' agora corresponde ao 'categoryId'
     return products.filter((product) => product.category === activeCategory);
   }, [activeCategory, products]);
 
