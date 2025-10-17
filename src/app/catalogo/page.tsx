@@ -11,7 +11,7 @@ export default function CatalogoPage() {
         <p className="text-muted-foreground text-center mb-10">
           Explore a nossa coleção completa ou filtre por categoria.
         </p>
-        
+
         <Suspense fallback={<p className="text-center">A carregar filtros...</p>}>
           <CatalogContent />
         </Suspense>

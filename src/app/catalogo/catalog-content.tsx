@@ -3,18 +3,63 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { products } from "../../data/products";
 import { ProductCard } from "../../components/product-card";
 import { Button } from "../../components/ui/button";
+import type { Product } from "@/lib/types"; // Nosso tipo de frontend
+import type { Product as PrismaProduct, Category as PrismaCategory, Specification, PriceTier } from "@prisma/client"; // Tipos do Prisma
+
+type ProductFromApi = PrismaProduct & {
+  specifications: Specification | null;
+  priceTable: PriceTier[];
+};
 
 export function CatalogContent() {
-  const allCategories = useMemo(() => [
-    "Todos",
-    ...new Set(products.map((product) => product.category)),
-  ], []);
-  
+  const [products, setProducts] = useState<Product[]>([]);
+  const [allCategories, setAllCategories] = useState<string[]>(["Todos"]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [activeCategory, setActiveCategory] = useState("Todos");
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [productsRes, categoriesRes] = await Promise.all([
+          fetch('/api/products'),
+          fetch('/api/categories')
+        ]);
+
+        if (!productsRes.ok || !categoriesRes.ok) {
+          throw new Error("Falha ao carregar os dados do catálogo.");
+        }
+
+        const productsData: ProductFromApi[] = await productsRes.json();
+        const categoriesData: PrismaCategory[] = await categoriesRes.json();
+
+        // ✅ CORREÇÃO AQUI:
+        // Verificamos se 'p.specifications' existe. Se não existir (for null),
+        // criamos um objeto de especificações com valores padrão.
+        // Isto garante que o objeto final corresponde sempre ao tipo 'Product'.
+        const formattedProducts = productsData.map((p: ProductFromApi) => ({
+          ...p,
+          category: p.categoryId,
+          specifications: p.specifications ?? { material: '', capacidade: '', dimensoes: '' },
+        }));
+
+        const categoryNames = categoriesData.map((c) => c.name);
+
+        setProducts(formattedProducts);
+        setAllCategories(["Todos", ...categoryNames]);
+
+      } catch (error) {
+        console.error("Falha ao buscar dados:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   useEffect(() => {
     const categoryFromURL = searchParams.get("categoria");
@@ -31,7 +76,11 @@ export function CatalogContent() {
       return products;
     }
     return products.filter((product) => product.category === activeCategory);
-  }, [activeCategory]);
+  }, [activeCategory, products]);
+
+  if (isLoading) {
+    return <p className="text-center text-muted-foreground animate-pulse">A carregar catálogo...</p>;
+  }
 
   return (
     <>

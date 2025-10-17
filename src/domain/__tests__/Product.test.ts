@@ -1,10 +1,26 @@
 // src/domain/__tests__/Product.test.ts
 import { Product } from '../models/Product';
-import { products } from '@/data/products';
+import type { Product as ProductType } from '@/lib/types'; // Importar o tipo do frontend para consistência
 
 describe('Product Entity', () => {
 
-  const validProductData = products[0];
+  // ✅ ALTERAÇÃO: Criamos um objeto de teste local em vez de importar de um ficheiro externo.
+  // Isto torna o teste unitário verdadeiramente independente.
+  const validProductData: ProductType = {
+    id: 'clxrz8hax00013b6khe69046d', // ID agora é uma string
+    slug: 'copo-long-drink-personalizado',
+    name: 'Copo Long Drink Personalizado',
+    shortDescription: 'Ideal para festas, eventos e brindes corporativos.',
+    description: 'O Copo Long Drink é um clássico versátil para qualquer ocasião.',
+    images: ['/images/products/long-drink-1.jpg'],
+    specifications: { material: 'Acrílico', capacidade: '350ml', dimensoes: '15cm altura' },
+    priceTable: [
+      { quantity: '50-99 unidades', price: 3.9 },
+      { quantity: '100+ unidades', price: 3.5 },
+    ],
+    priceInfo: 'O valor inclui personalização em 1 cor.',
+    category: 'Copos',
+  };
 
   it('deve criar uma instância de Product com dados válidos', () => {
     const product = new Product(validProductData);
@@ -14,6 +30,7 @@ describe('Product Entity', () => {
 
   it('deve calcular o preço inicial corretamente com múltiplos preços', () => {
     const product = new Product(validProductData);
+    // O menor preço na nossa tabela de teste é 3.5
     expect(product.startingPrice).toBe(3.5);
   });
 
@@ -32,17 +49,12 @@ describe('Product Entity', () => {
     expect(() => new Product(invalidData)).toThrow("O produto deve ter uma tabela de preços.");
   });
 
-  // ✅ NOVO TESTE UNITÁRIO ADICIONADO AQUI
   it('deve calcular o preço inicial corretamente quando há apenas um preço', () => {
-    // Prepara dados de um produto com apenas uma faixa de preço
     const singlePriceData = {
       ...validProductData,
       priceTable: [{ quantity: '1-10 unidades', price: 9.90 }]
     };
-
     const product = new Product(singlePriceData);
-
-    // Espera que o preço inicial seja o único preço disponível
     expect(product.startingPrice).toBe(9.90);
   });
 });

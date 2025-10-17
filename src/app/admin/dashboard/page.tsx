@@ -1,16 +1,36 @@
 // src/app/admin/dashboard/page.tsx
 import { Button } from "@/components/ui/button";
-import { products } from "@/data/products";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowUpRight, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
-export default function DashboardPage() {
-  // Simulando dados dinâmicos
-  const totalProducts = products.length;
-  const totalCategories = [...new Set(products.map(p => p.category))].length;
-  const recentProducts = products.slice(0, 4); // Pegar os 4 primeiros como "recentes"
+// ✅ 1. Importar os nossos serviços e tipos do Prisma
+import { ProductRepository } from "@/domain/repositories/ProductRepository";
+import { ProductService } from "@/domain/services/ProductService";
+import { CategoryRepository } from "@/domain/repositories/CategoryRepository";
+import { CategoryService } from "@/domain/services/CategoryService";
+import type { Product as PrismaProduct } from '@prisma/client';
+
+// ✅ 2. A página agora é um Server Component (async)
+export default async function DashboardPage() {
+  // Instanciar os serviços
+  const productRepository = new ProductRepository();
+  const productService = new ProductService(productRepository);
+  const categoryRepository = new CategoryRepository();
+  const categoryService = new CategoryService(categoryRepository);
+
+  // TODO: Obter o ID do catálogo do utilizador correto
+  const MOCK_CATALOG_ID = "clxrz8hax00003b6khe69046c";
+
+  // ✅ 3. Buscar os dados reais da base de dados
+  const allProducts = await productService.getProducts(MOCK_CATALOG_ID);
+  const allCategories = await categoryService.getAllCategories(MOCK_CATALOG_ID);
+
+  // Calcular os totais e produtos recentes
+  const totalProducts = allProducts.length;
+  const totalCategories = allCategories.length;
+  const recentProducts = allProducts.slice(0, 4); // Por agora, pegar os 4 mais recentes da lista
 
   return (
     <div className="space-y-6">
@@ -34,9 +54,6 @@ export default function DashboardPage() {
             Adicionar Novo Produto
           </Link>
         </Button>
-        
-        {/* --- ALTERAÇÃO AQUI --- */}
-        {/* Trocámos a tag <a> por <Link> e removemos o target="_blank" */}
         <Button size="lg" variant="outline" asChild>
           <Link href="/">
             Ver o meu Catálogo
@@ -45,7 +62,7 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      {/* Secção de Produtos Recentes (Tabela) */}
+      {/* ✅ 4. Secção de Produtos Recentes atualizada */}
       <div className="rounded-lg border bg-card p-6">
         <h3 className="text-xl font-semibold mb-4">Produtos Adicionados Recentemente</h3>
         <Table>
@@ -57,11 +74,11 @@ export default function DashboardPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {recentProducts.map((product) => (
+            {recentProducts.map((product: PrismaProduct) => (
               <TableRow key={product.id}>
                 <TableCell>
                   <Image
-                    src={product.images[0]}
+                    src={product.images[0] || '/images/placeholder.png'} // Adicionar uma imagem de fallback
                     alt={product.name}
                     width={40}
                     height={40}
@@ -69,7 +86,8 @@ export default function DashboardPage() {
                   />
                 </TableCell>
                 <TableCell className="font-medium">{product.name}</TableCell>
-                <TableCell>{product.category}</TableCell>
+                {/* O produto do Prisma tem 'categoryId'. Precisamos de encontrar o nome da categoria. */}
+                <TableCell>{allCategories.find(c => c.id === product.categoryId)?.name || 'Sem categoria'}</TableCell>
               </TableRow>
             ))}
           </TableBody>

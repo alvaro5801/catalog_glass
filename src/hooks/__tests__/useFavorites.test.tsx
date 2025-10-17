@@ -31,10 +31,11 @@ describe('useFavorites Hook (com Contexto)', () => {
   });
 
   it('deve carregar os favoritos a partir do localStorage ao iniciar', () => {
-    const storedFavorites = JSON.stringify([1, 5]);
+    // ✅ ALTERAÇÃO: IDs agora são strings
+    const storedFavorites = JSON.stringify(['prod_1', 'prod_5']);
     mockGetItem.mockReturnValueOnce(storedFavorites);
     const { result } = renderHook(() => useFavorites(), { wrapper });
-    expect(result.current.favorites).toEqual([1, 5]);
+    expect(result.current.favorites).toEqual(['prod_1', 'prod_5']);
   });
 
   it('deve adicionar um novo produto aos favoritos', () => {
@@ -42,23 +43,23 @@ describe('useFavorites Hook (com Contexto)', () => {
     const { result } = renderHook(() => useFavorites(), { wrapper });
 
     act(() => {
-      result.current.toggleFavorite(3);
+      result.current.toggleFavorite('prod_3'); // ✅ ALTERAÇÃO: ID é string
     });
 
-    expect(result.current.favorites).toContain(3);
-    expect(mockSetItem).toHaveBeenCalledWith('favoriteProducts', JSON.stringify([3]));
+    expect(result.current.favorites).toContain('prod_3');
+    expect(mockSetItem).toHaveBeenCalledWith('favoriteProducts', JSON.stringify(['prod_3']));
   });
 
   it('deve remover um produto existente dos favoritos', () => {
-    const storedFavorites = JSON.stringify([3, 7]);
+    const storedFavorites = JSON.stringify(['prod_3', 'prod_7']);
     mockGetItem.mockReturnValueOnce(storedFavorites);
     const { result } = renderHook(() => useFavorites(), { wrapper });
 
     act(() => {
-      result.current.toggleFavorite(3);
+      result.current.toggleFavorite('prod_3'); // ✅ ALTERAÇÃO: ID é string
     });
 
-    expect(result.current.favorites).toEqual([7]);
-    expect(mockSetItem).toHaveBeenCalledWith('favoriteProducts', JSON.stringify([7]));
+    expect(result.current.favorites).toEqual(['prod_7']);
+    expect(mockSetItem).toHaveBeenCalledWith('favoriteProducts', JSON.stringify(['prod_7']));
   });
 });

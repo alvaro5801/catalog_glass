@@ -3,23 +3,20 @@
 
 import React, { createContext, useState, useEffect, useCallback, useContext } from 'react';
 
-// A chave que usaremos para guardar os dados no localStorage
 const FAVORITES_KEY = 'favoriteProducts';
 
-// 1. Definir a estrutura do nosso Contexto
+// ✅ ALTERAÇÃO: A interface agora trabalha com 'string'
 interface FavoritesContextType {
-  favorites: number[];
-  toggleFavorite: (productId: number) => void;
+  favorites: string[];
+  toggleFavorite: (productId: string) => void;
 }
 
-// 2. Criar o Contexto
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
 
-// 3. Criar o Provedor (o componente que vai "segurar" o estado)
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
-  const [favorites, setFavorites] = useState<number[]>([]);
+  // ✅ ALTERAÇÃO: O estado agora é um array de strings
+  const [favorites, setFavorites] = useState<string[]>([]);
 
-  // Carrega os favoritos do localStorage quando o componente é montado
   useEffect(() => {
     try {
       const storedFavorites = localStorage.getItem(FAVORITES_KEY);
@@ -31,8 +28,8 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Salva os favoritos no localStorage sempre que o estado 'favorites' muda
-  const saveFavorites = (items: number[]) => {
+  // ✅ ALTERAÇÃO: O tipo do parâmetro é 'string[]'
+  const saveFavorites = (items: string[]) => {
     try {
       localStorage.setItem(FAVORITES_KEY, JSON.stringify(items));
     } catch (error) {
@@ -40,20 +37,19 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // A função para adicionar/remover favoritos
-  const toggleFavorite = useCallback((productId: number) => {
+  // ✅ ALTERAÇÃO: O tipo do productId é 'string'
+  const toggleFavorite = useCallback((productId: string) => {
     setFavorites(prevFavorites => {
       const isFavorite = prevFavorites.includes(productId);
       const newFavorites = isFavorite
         ? prevFavorites.filter(id => id !== productId)
         : [...prevFavorites, productId];
 
-      saveFavorites(newFavorites); // Guarda no localStorage
+      saveFavorites(newFavorites);
       return newFavorites;
     });
   }, []);
 
-  // O valor que será partilhado com todos os componentes-filho
   const value = { favorites, toggleFavorite };
 
   return (
@@ -63,7 +59,6 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// 4. Criar um hook personalizado para consumir o contexto facilmente
 export function useFavorites() {
   const context = useContext(FavoritesContext);
   if (context === undefined) {
