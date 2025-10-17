@@ -2,33 +2,34 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ProductDetail } from '../product-detail';
-import { products } from '@/data/products';
+import type { Product } from '@/lib/types'; // ✅ 1. Importar o nosso tipo de dados do frontend
 
 describe('ProductDetail Component', () => {
   it('deve atualizar a imagem principal ao clicar numa miniatura', () => {
-    // 1. ✅ CORREÇÃO: A lógica de encontrar o produto fica DENTRO do teste.
-    const productWithMultipleImages = products.find(p => p.images.length > 1);
-
-    // 2. ✅ BOA PRÁTICA: Uma verificação garante que temos dados de teste válidos.
-    if (!productWithMultipleImages) {
-      throw new Error("Dados de teste em falta: Nenhum produto com múltiplas imagens foi encontrado em products.ts.");
-    }
+    // ✅ 2. Criar dados de teste locais em vez de importar.
+    const productWithMultipleImages: Product = {
+      id: 'prod_multi_img_123',
+      slug: 'produto-multiplas-imagens',
+      name: 'Produto com Várias Imagens',
+      images: ['/image1.jpg', '/image2.jpg', '/image3.jpg'],
+      category: 'Testes',
+      shortDescription: 'Descrição curta.',
+      description: 'Descrição longa.',
+      specifications: { material: 'Teste', capacidade: '100ml', dimensoes: '10x10' },
+      priceTable: [{ quantity: '1', price: 10 }],
+      priceInfo: 'Preço de teste.',
+    };
 
     render(<ProductDetail product={productWithMultipleImages} />);
 
-    // Encontra a imagem principal
     const mainImage = screen.getByAltText(productWithMultipleImages.name);
-    
-    // Verifica se a imagem inicial está correta
+
     expect(mainImage).toHaveAttribute('src', expect.stringContaining(encodeURIComponent(productWithMultipleImages.images[0])));
 
-    // Encontra a segunda miniatura pelo seu 'alt' text único e numerado
     const secondThumbnail = screen.getByAltText(`${productWithMultipleImages.name} thumbnail 2`);
-    
-    // Clica na miniatura
+
     fireEvent.click(secondThumbnail);
 
-    // Verifica se a imagem principal foi atualizada
     expect(mainImage).toHaveAttribute('src', expect.stringContaining(encodeURIComponent(productWithMultipleImages.images[1])));
   });
 });

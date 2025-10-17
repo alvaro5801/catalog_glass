@@ -1,0 +1,87 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// MODELO DE UTILIZADOR E ASSINATURA
+model User {
+  id               String    @id @default(cuid())
+  name             String?
+  email            String    @unique
+  stripeCustomerId String?   @unique
+  subscription     Subscription?
+  catalogs         Catalog[]
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  plan      String
+  status    String
+}
+
+// MODELO DO CATÁLOGO E SEUS AGREGADOS
+model Catalog {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  products    Product[]
+  categories  Category[]
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  catalogId String
+  catalog   Catalog  @relation(fields: [catalogId], references: [id])
+  products  Product[]
+
+  // ✅ CORREÇÃO 2: Garante que o nome da categoria é único DENTRO de um catálogo.
+  @@unique([name, catalogId])
+}
+
+model Product {
+  id               String       @id @default(cuid())
+  slug             String       @unique
+  name             String
+  shortDescription String
+  description      String
+  images           String[]
+  priceInfo        String
+  isFeatured       Boolean      @default(false)
+
+  // ✅ CORREÇÃO 1: A relação agora é feita pelo ID da categoria, que é único.
+  categoryId       String
+  category         Category     @relation(fields: [categoryId], references: [id])
+  
+  catalogId        String
+  catalog          Catalog      @relation(fields: [catalogId], references: [id])
+  
+  specifications   Specification?
+  priceTable       PriceTier[]
+}
+
+model Specification {
+  id          String  @id @default(cuid())
+  material    String
+  capacidade  String
+  dimensoes   String
+  productId   String  @unique
+  product     Product @relation(fields: [productId], references: [id])
+}
+
+model PriceTier {
+  id        String  @id @default(cuid())
+  quantity  String
+  price     Float
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+}

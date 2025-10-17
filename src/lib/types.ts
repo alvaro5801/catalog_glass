@@ -1,6 +1,6 @@
-// Definição do tipo Product
+// src/lib/types.ts
 export type Product = {
-  id: number;
+  id: string; // ✅ ALTERAÇÃO: de 'number' para 'string'
   slug: string;
   name: string;
   shortDescription: string;
@@ -14,5 +14,5 @@ export type Product = {
   priceTable: { quantity: string; price: number }[];
   priceInfo: string;
   category: string;
-  isFeatured?: boolean; // ✅ CORREÇÃO: Propriedade opcional adicionada aqui
+  isFeatured?: boolean;
 };

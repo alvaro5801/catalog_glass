@@ -1,62 +1,47 @@
 // src/app/api/categories/[name]/route.ts
 import { NextResponse, type NextRequest } from "next/server";
-import { categories } from "@/app/api/categories/data"; // ✅ Importa o array do módulo separado
+import { CategoryRepository } from "@/domain/repositories/CategoryRepository";
+import { CategoryService } from "@/domain/services/CategoryService";
+
+// Instanciar as dependências
+const categoryRepository = new CategoryRepository();
+const categoryService = new CategoryService(categoryRepository);
+
+const MOCK_CATALOG_ID = "clxrz8hax00003b6khe69046c"; // TODO: Substituir pelo ID do utilizador logado
+
+// --- FUNÇÃO PUT (Atualizar) ---
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { name: string } }
+) {
+  try {
+    const originalCategoryName = decodeURIComponent(params.name);
+    const { newName } = await request.json();
+
+    const updatedCategory = await categoryService.updateCategory(originalCategoryName, newName, MOCK_CATALOG_ID);
+
+    return NextResponse.json(updatedCategory, { status: 200 });
+  } catch (error) {
+    const err = error as Error;
+    const status = err.message.includes("não encontrada") ? 404 : 400;
+    return NextResponse.json({ error: err.message }, { status });
+  }
+}
+
 
 // --- FUNÇÃO DELETE ---
 export async function DELETE(
   request: NextRequest,
-  context: { params: Promise<{ name: string }> } // ✅ Tipagem compatível com Next 15
+  { params }: { params: { name: string } }
 ) {
-  const { name } = await context.params; // ✅ Necessário "await" no Next 15
-  const categoryToDelete = decodeURIComponent(name);
-  const initialLength = categories.length;
+  try {
+    const categoryName = decodeURIComponent(params.name);
+    await categoryService.deleteCategory(categoryName, MOCK_CATALOG_ID);
 
-  const updatedCategories = categories.filter(
-    (cat: string) => cat !== categoryToDelete
-  );
-
-  if (updatedCategories.length === initialLength) {
-    return NextResponse.json(
-      { error: "Categoria não encontrada." },
-      { status: 404 }
-    );
+    return new NextResponse(null, { status: 204 }); // 204 No Content
+  } catch (error) {
+    const err = error as Error;
+    const status = err.message.includes("não encontrada") ? 404 : 400;
+    return NextResponse.json({ error: err.message }, { status });
   }
-
-  // Atualiza o array global (simulação de banco)
-  categories.length = 0;
-  categories.push(...updatedCategories);
-
-  return NextResponse.json(categories, { status: 200 });
-}
-
-// --- FUNÇÃO PUT ---
-export async function PUT(
-  request: NextRequest,
-  context: { params: Promise<{ name: string }> } // ✅ Mesmo ajuste aqui
-) {
-  const { name } = await context.params;
-  const originalCategory = decodeURIComponent(name);
-  const { newName } = await request.json();
-
-  if (!newName || (categories.includes(newName) && newName !== originalCategory)) {
-    return NextResponse.json(
-      { error: "Novo nome inválido ou já existente." },
-      { status: 400 }
-    );
-  }
-
-  const categoryIndex = categories.findIndex(
-    (cat: string) => cat === originalCategory
-  );
-
-  if (categoryIndex === -1) {
-    return NextResponse.json(
-      { error: "Categoria original não encontrada." },
-      { status: 404 }
-    );
-  }
-
-  categories[categoryIndex] = newName;
-
-  return NextResponse.json(categories, { status: 200 });
 }

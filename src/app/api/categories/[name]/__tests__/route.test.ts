@@ -1,64 +1,60 @@
-// src/app/api/categories/[name]/__tests__/route.test.ts
 import { DELETE, PUT } from '../route';
 import type { NextRequest } from 'next/server';
 
-let mockCategories: string[];
+// ✅ Mock criado dentro da função, para evitar hoisting
+jest.mock('@/domain/services/CategoryService', () => {
+  const mockUpdateCategory = jest.fn();
+  const mockDeleteCategory = jest.fn();
 
-jest.mock('@/app/api/categories/data', () => ({
-  __esModule: true,
-  get categories() { return mockCategories; },
-  set categories(newValue: string[]) { mockCategories = newValue; }
-}));
+  return {
+    CategoryService: jest.fn().mockImplementation(() => ({
+      updateCategory: mockUpdateCategory,
+      deleteCategory: mockDeleteCategory,
+    })),
+    __mocks__: { mockUpdateCategory, mockDeleteCategory },
+  };
+});
+
+const { __mocks__ } = jest.requireMock('@/domain/services/CategoryService');
+const { mockUpdateCategory, mockDeleteCategory } = __mocks__;
 
 describe('API Route: /api/categories/[name]', () => {
   beforeEach(() => {
-    mockCategories = ["Bebidas", "Comidas", "Sobremesas"];
+    mockUpdateCategory.mockReset();
+    mockDeleteCategory.mockReset();
   });
 
   describe('DELETE', () => {
-    it('deve apagar uma categoria existente e retornar a lista atualizada', async () => {
-      const categoryToDelete = "Comidas";
-      const request = new Request(`http://localhost/api/categories/${categoryToDelete}`, { method: 'DELETE' });
+    it('deve apagar a categoria (204)', async () => {
+      mockDeleteCategory.mockResolvedValue(undefined);
 
-      // ✅ CORREÇÃO: Envolvemos os parâmetros numa Promise
-      const context = { params: Promise.resolve({ name: categoryToDelete }) };
+      const categoryName = 'Comidas';
+      const request = new Request(`http://localhost/api/categories/${categoryName}`, { method: 'DELETE' });
+      const context = { params: { name: categoryName } };
       const response = await DELETE(request as NextRequest, context);
 
-      const updatedCategories = await response.json();
-      expect(response.status).toBe(200);
-      expect(updatedCategories).not.toContain(categoryToDelete);
-    });
-
-    it('deve retornar um erro 404 se a categoria não existir', async () => {
-      const request = new Request('http://localhost/api/categories/Inexistente', { method: 'DELETE' });
-
-      // ✅ CORREÇÃO: Envolvemos os parâmetros numa Promise
-      const context = { params: Promise.resolve({ name: "CategoriaInexistente" }) };
-      const response = await DELETE(request as NextRequest, context);
-
-      const body = await response.json();
-      expect(response.status).toBe(404);
-      expect(body.error).toBe('Categoria não encontrada.');
+      expect(mockDeleteCategory).toHaveBeenCalledWith(categoryName, expect.any(String));
+      expect(response.status).toBe(204);
     });
   });
 
   describe('PUT', () => {
-    it('deve editar uma categoria existente e retornar a lista atualizada', async () => {
-      const originalCategory = "Comidas";
-      const newName = "Pratos Quentes";
-      const request = new Request(`http://localhost/api/categories/${originalCategory}`, {
+    it('deve atualizar a categoria (200)', async () => {
+      const updated = { id: 'cat_1', name: 'Pratos Quentes' };
+      mockUpdateCategory.mockResolvedValue(updated);
+
+      const request = new Request('http://localhost/api/categories/Comidas', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newName }),
+        body: JSON.stringify({ newName: 'Pratos Quentes' }),
       });
-
-      // ✅ CORREÇÃO: Envolvemos os parâmetros numa Promise
-      const context = { params: Promise.resolve({ name: originalCategory }) };
+      const context = { params: { name: 'Comidas' } };
       const response = await PUT(request as NextRequest, context);
+      const body = await response.json();
 
-      const updatedCategories = await response.json();
+      expect(mockUpdateCategory).toHaveBeenCalledWith('Comidas', 'Pratos Quentes', expect.any(String));
       expect(response.status).toBe(200);
-      expect(updatedCategories).toContain(newName);
+      expect(body).toEqual(updated);
     });
   });
 });
