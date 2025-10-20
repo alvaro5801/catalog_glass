@@ -1,64 +1,77 @@
-// src/app/login-redirect/__tests__/page.test.tsx
 import React from 'react';
-import { render, waitFor } from '@testing-library/react';
+import { render, waitFor, screen, act } from '@testing-library/react';
 import LoginRedirectPage from '../page';
 
-// 1. Simular o router do Next.js
-// Precisamos de controlar a função `push` para verificar se ela é chamada com o URL correto.
+// --- Mock do router ---
 const mockPush = jest.fn();
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockPush,
-  }),
+  useRouter: () => ({ push: mockPush }),
 }));
 
-// 2. Simular o localStorage do browser
-// Os testes são executados num ambiente que não tem localStorage, por isso criamos uma simulação.
-let mockLocalStorage: { [key: string]: string } = {};
-
-Object.defineProperty(window, 'localStorage', {
-  value: {
-    getItem: (key: string) => mockLocalStorage[key] || null,
-    setItem: (key: string, value: string) => {
-      mockLocalStorage[key] = value;
-    },
-    clear: () => {
-      mockLocalStorage = {};
-    }
-  },
-  writable: true,
-});
-
+// --- Mock do useSession ---
+const mockUseSession = jest.fn();
+jest.mock('next-auth/react', () => ({
+  useSession: () => mockUseSession(),
+}));
 
 describe('LoginRedirectPage', () => {
-
-  // Limpa as simulações antes de cada teste para garantir que são independentes.
   beforeEach(() => {
-    mockPush.mockClear();
-    localStorage.clear();
+    jest.clearAllMocks();
   });
 
-  it('deve redirecionar para /onboarding se o onboarding não estiver completo', async () => {
-    // Cenário: localStorage está vazio ou 'onboardingComplete' é 'false'.
+  // 1️⃣ Estado de carregamento
+  it('deve exibir a mensagem de carregamento e não redirecionar imediatamente', async () => {
+    mockUseSession.mockReturnValue({ status: 'loading', data: null });
+
+    render(<LoginRedirectPage />);
+    expect(screen.getByText(/A autenticar.../i)).toBeInTheDocument();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  // 2️⃣ Redirecionar para /onboarding
+  it('deve redirecionar para /onboarding se autenticado mas o onboarding não está completo', async () => {
+    mockUseSession.mockReturnValue({
+      status: 'authenticated',
+      data: { user: { id: 'user123', onboardingComplete: false } },
+    });
+
     render(<LoginRedirectPage />);
 
-    // Usamos 'waitFor' para esperar que o useEffect dentro do componente seja executado.
     await waitFor(() => {
-      // Verificamos se a função 'push' foi chamada com o URL do onboarding.
       expect(mockPush).toHaveBeenCalledWith('/onboarding');
     });
+    expect(mockPush).toHaveBeenCalledTimes(1);
   });
 
-  it('deve redirecionar para / se o onboarding estiver completo', async () => {
-    // Cenário: Marcamos o onboarding como completo no nosso localStorage simulado.
-    localStorage.setItem('onboardingComplete', 'true');
+  // 3️⃣ Redirecionar para /admin/dashboard
+  it('deve redirecionar para /admin/dashboard se autenticado e o onboarding está completo', async () => {
+    mockUseSession.mockReturnValue({
+      status: 'authenticated',
+      data: { user: { id: 'user123', onboardingComplete: true } },
+    });
 
     render(<LoginRedirectPage />);
 
     await waitFor(() => {
-      // Verificamos se a função 'push' foi chamada com o URL da página principal.
-      // A lógica atual redireciona para '/', o que está correto para o site público.
-      expect(mockPush).toHaveBeenCalledWith('/');
+      expect(mockPush).toHaveBeenCalledWith('/admin/dashboard');
     });
+    expect(mockPush).toHaveBeenCalledTimes(1);
+  });
+
+  // 4️⃣ Redirecionar para /saas
+  it('deve redirecionar para /saas se não autenticado', async () => {
+    mockUseSession.mockReturnValue({ status: 'unauthenticated', data: null });
+
+    render(<LoginRedirectPage />);
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/saas');
+    });
+    expect(mockPush).toHaveBeenCalledTimes(1);
   });
 });

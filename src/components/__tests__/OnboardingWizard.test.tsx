@@ -3,7 +3,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { OnboardingWizard } from '../onboarding-wizard';
 
-// 1. Simular o router e o localStorage, tal como fizemos no teste anterior.
+// Simular o router
 const mockPush = jest.fn();
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -11,58 +11,94 @@ jest.mock('next/navigation', () => ({
   }),
 }));
 
-const mockSetItem = jest.fn();
+// Simular o localStorage (sem alterações)
+const mockGetItem = jest.fn();
 Object.defineProperty(window, 'localStorage', {
   value: {
-    setItem: (key: string, value: string) => mockSetItem(key, value),
+    getItem: (key: string) => mockGetItem(key),
   },
   writable: true,
 });
+
+// Simular o fetch
+const mockFetch = jest.fn();
+global.fetch = mockFetch;
 
 
 describe('OnboardingWizard Component', () => {
 
   beforeEach(() => {
-    // Limpa as simulações antes de cada teste
     mockPush.mockClear();
-    mockSetItem.mockClear();
+    mockFetch.mockClear();
+    mockGetItem.mockClear();
   });
 
   it('deve permitir que o utilizador complete o fluxo de onboarding', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: 'catalog-123' }),
+    });
+
     render(<OnboardingWizard />);
 
-    // --- PASSO 1: Identidade do Negócio ---
-    // Encontra o campo "Nome do Negócio", preenche-o e clica em "Continuar".
+    // --- Passos 1, 2, 3 (sem alterações) ---
     fireEvent.change(screen.getByLabelText(/Nome do Negócio/i), { target: { value: 'Minha Loja Incrível' } });
     fireEvent.click(screen.getByRole('button', { name: /Continuar/i }));
-
-    // --- PASSO 2: Criação de Categorias ---
-    // Usa 'await findByText' para esperar que o próximo passo apareça na tela.
     await screen.findByText(/Crie as suas Categorias/i);
     fireEvent.change(screen.getByPlaceholderText(/Ex: Bebidas/i), { target: { value: 'Copos Especiais' } });
     fireEvent.click(screen.getByRole('button', { name: /Adicionar/i }));
     fireEvent.click(screen.getByRole('button', { name: /Continuar/i }));
-
-    // --- PASSO 3: Adicionar Primeiro Produto ---
-    // Espera pelo ecrã de adicionar produto. Como os campos não são obrigatórios,
-    // apenas clicamos em "Finalizar" para simular o fluxo.
     await screen.findByText(/Adicione o seu Primeiro Produto/i);
     fireEvent.click(screen.getByRole('button', { name: /Finalizar/i }));
 
-    // --- PASSO 4: Conclusão ---
-    // Espera pelo ecrã de sucesso e clica no botão final.
-    await screen.findByText(/Tudo pronto!/i);
-    fireEvent.click(screen.getByRole('button', { name: /Concluir e Ver meu Catálogo/i }));
-
-    // --- VERIFICAÇÕES FINAIS ---
-    // Usamos 'waitFor' para garantir que as verificações só são feitas após a conclusão
-    // de todas as ações assíncronas (como o clique no botão).
+    // --- Verificação do fetch ---
     await waitFor(() => {
-      // Verifica se o localStorage foi atualizado corretamente.
-      expect(mockSetItem).toHaveBeenCalledWith('onboardingComplete', 'true');
+      expect(mockFetch).toHaveBeenCalledWith('/api/onboarding', expect.objectContaining({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // ✅ CORRIGIDO: Incluir imageFile: null no produto esperado
+        body: JSON.stringify({
+          businessName: 'Minha Loja Incrível',
+          categories: ['Copos', 'Canecas', 'Copos Especiais'],
+          product: { name: "Copo Long Drink", imageFile: null, price: "9.99" }, // <-- Alteração aqui
+        }),
+      }));
+    });
 
-      // Verifica se o utilizador foi redirecionado para a página principal.
-      expect(mockPush).toHaveBeenCalledWith('/');
+
+    // --- Passo 4 (sem alterações) ---
+    await screen.findByText(/Tudo pronto!/i);
+    fireEvent.click(screen.getByRole('button', { name: /Aceder ao Painel/i }));
+
+    // --- VERIFICAÇÕES FINAIS (sem alterações) ---
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/admin/dashboard');
     });
   });
+
+  // Teste de falha da API (sem alterações)
+  it('deve exibir uma mensagem de erro se a API falhar', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ error: 'Erro simulado da API.' }),
+    });
+
+    render(<OnboardingWizard />);
+
+    // Navegar até ao passo 3
+    fireEvent.change(screen.getByLabelText(/Nome do Negócio/i), { target: { value: 'Loja Falha' } });
+    fireEvent.click(screen.getByRole('button', { name: /Continuar/i }));
+    await screen.findByText(/Crie as suas Categorias/i);
+    fireEvent.click(screen.getByRole('button', { name: /Continuar/i }));
+    await screen.findByText(/Adicione o seu Primeiro Produto/i);
+
+    // Clicar em Finalizar
+    fireEvent.click(screen.getByRole('button', { name: /Finalizar/i }));
+
+    // Verificar erro
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Erro simulado da API./i);
+    expect(screen.queryByText(/Tudo pronto!/i)).not.toBeInTheDocument();
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
 });
