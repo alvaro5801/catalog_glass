@@ -5,16 +5,19 @@ import PageLayout from "./page-layout";
 import Link from "next/link";
 import { Button } from "../components/ui/button";
 import { Search, PenSquare, MessageCircle, GlassWater, Wine, Coffee } from "lucide-react";
-import { motion } from "framer-motion"; // Motion can be used in Server Components for initial animations
+// import { motion } from "framer-motion"; // <-- 1. REMOVIDO DAQUI
 
-// ✅ 1. Importar os nossos serviços e tipos do Prisma
+// ✅ 2. IMPORTADO O NOVO COMPONENTE "CLIENT"
+import { HeroBanner } from "@/components/hero-banner";
+
+// Importar os nossos serviços e tipos do Prisma
 import { ProductRepository } from "@/domain/repositories/ProductRepository";
 import { ProductService } from "@/domain/services/ProductService";
 import { CategoryRepository } from "@/domain/repositories/CategoryRepository";
 import { CategoryService } from "@/domain/services/CategoryService";
 import type { Product as PrismaProduct } from '@prisma/client';
 
-// ✅ 2. A página agora é um Server Component (async)
+// A página continua a ser um Server Component (async)
 export default async function Home() {
   // Instanciar serviços para buscar dados
   const productRepository = new ProductRepository();
@@ -59,25 +62,9 @@ export default async function Home() {
   return (
     <PageLayout>
       {/* Secção 1: Banner Principal */}
-      <section className="relative h-screen w-full overflow-hidden">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="relative z-10 flex h-full flex-col items-center justify-center text-center text-white">
-          <div className="max-w-3xl mx-auto px-4">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter">
-              Transforme Momentos em Memórias com Copos Personalizados
-            </h1>
-            <p className="mt-6 text-lg md:text-xl text-white/90">
-              Desde festas vibrantes a brindes corporativos elegantes, encontre o copo
-              perfeito para cada ocasião.
-            </p>
-            <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
-              <Button asChild size="lg"><Link href="/catalogo">Explorar Catálogo</Link></Button>
-              <Button asChild size="lg" variant="secondary"><Link href="#como-funciona">Ver Como Funciona</Link></Button>
-            </div>
-          </div>
-        </motion.div>
-        <div className="absolute inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url(/images/hero-background.jpg)` }} />
-        <div className="absolute inset-0 z-0 bg-black/40" />
-      </section>
+
+      {/* ✅ 3. O CONTEÚDO DA SECÇÃO FOI SUBSTITUÍDO PELO NOVO COMPONENTE */}
+      <HeroBanner />
 
       {/* Secção 2: Como Funciona */}
       <section id="como-funciona" className="py-20">
@@ -91,7 +78,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ✅ 3. A seção de destaques agora usa os dados da base de dados. */}
+      {/* 3. A seção de destaques agora usa os dados da base de dados. */}
       {featuredProducts.length > 0 && (
         <section className="py-20 bg-muted">
           <div className="container mx-auto px-4">
@@ -116,7 +103,7 @@ export default async function Home() {
         </section>
       )}
 
-      {/* ✅ 4. A seção de categorias agora usa os dados da base de dados. */}
+      {/* 4. A seção de categorias agora usa os dados da base de dados. */}
       <section className="bg-white py-20">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-2xl mx-auto"><h2 className="text-3xl md:text-4xl font-bold">Navegue por Categoria</h2><p className="mt-4 text-muted-foreground">Encontre exatamente o que precisa de forma rápida e fácil.</p></div>

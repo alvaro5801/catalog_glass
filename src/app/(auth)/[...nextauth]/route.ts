@@ -1,16 +1,16 @@
 // src/app/(auth)/[...nextauth]/route.ts
 import NextAuth from "next-auth";
-import { PrismaAdapter } from "@auth/prisma-adapter";
+// import { PrismaAdapter } from "@auth/prisma-adapter"; // 1. REMOVIDA
 import { prisma } from "@/lib/prisma";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcrypt";
-import type { Adapter } from "next-auth/adapters";
+// import type { Adapter } from "next-auth/adapters"; // 2. REMOVIDA
 import type { NextAuthOptions } from "next-auth"; // Importar o tipo
 
 // Definimos as opções de autenticação
 export const authOptions: NextAuthOptions = {
   // Usar o Prisma Adapter para ligar à base de dados
-  adapter: PrismaAdapter(prisma) as Adapter,
+  // adapter: PrismaAdapter(prisma) as Adapter, // 3. REMOVIDA
 
   // Definir os provedores de autenticação
   providers: [
