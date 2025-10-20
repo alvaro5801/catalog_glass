@@ -1,32 +1,25 @@
 // jest.config.js
-// 1. Usa a sintaxe CommonJS (require/module.exports)
 const nextJest = require('next/jest');
 
 const createJestConfig = nextJest({
+  // Fornece o caminho para a sua aplicação Next.js para carregar as configurações de .env
   dir: './',
 });
 
-/** @type {import('jest').Config} */
+// Adicione qualquer configuração personalizada do Jest que desejar aqui
 const customJestConfig = {
+  // ✅ CORREÇÃO: Alterado de volta para '.js' para corresponder ao nome do teu ficheiro.
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  
+  // O ambiente 'jsdom' simula um browser, essencial para testar componentes React.
   testEnvironment: 'jest-environment-jsdom',
   
-  // 2. Removemos a chave 'transform' explícita
-  // O next/jest vai tratar disso automaticamente.
-
-  // 3. Usamos o transformIgnorePatterns focado no problema
-  // Esta regex diz ao Jest: "Ignora tudo em /node_modules/ EXCETO 'next-auth' e '@auth/prisma-adapter'".
-  transformIgnorePatterns: [
-    '/node_modules/(?!next-auth|@auth/prisma-adapter).+\\.(js|jsx|ts|tsx)$',
-  ],
-
-  // O resto das tuas configurações está ótimo
+  // Mapeia o atalho '@/' para a pasta 'src/', para que as importações funcionem nos testes.
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  testPathIgnorePatterns: ['/node_modules/', '/.next/'],
-  verbose: true,
 };
 
-// 4. Usa 'module.exports' para exportar a configuração
+// createJestConfig é uma função assíncrona que exporta a configuração do Jest
+// para que o Next.js possa garantir que as transformações do SWC são carregadas.
 module.exports = createJestConfig(customJestConfig);
