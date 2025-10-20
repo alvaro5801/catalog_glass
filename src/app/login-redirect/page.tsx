@@ -1,70 +1,31 @@
+// src/app/login-redirect/page.tsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 
 export default function LoginRedirectPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
-  const [isChecking, setIsChecking] = useState(true);
-  const hasRedirected = useRef(false);
 
   useEffect(() => {
-    // Evitar redirecionamentos múltiplos
-    if (hasRedirected.current) return;
+    // --- LÓGICA DE VERIFICAÇÃO ---
+    const onboardingComplete = localStorage.getItem('onboardingComplete') === 'true';
 
-    const handleRedirect = async () => {
-      // Aguarda um pequeno tempo para simular comportamento real
-      await new Promise((resolve) => setTimeout(resolve, 20));
+    // Adicionamos este log para podermos ver o que está a ser lido do localStorage
+    console.log("Onboarding completo?", onboardingComplete);
 
-      console.log("Status da sessão:", status);
-      console.log("Sessão atual:", session);
-
-      if (status === "loading") {
-        // Ainda carregando -> apenas mostra o estado
-        return;
-      }
-
-      hasRedirected.current = true;
-
-      if (status === "unauthenticated") {
-        console.log("Usuário não autenticado → /saas");
-        router.push("/saas");
-        return;
-      }
-
-      if (status === "authenticated") {
-        const onboardingComplete = session?.user?.onboardingComplete === true;
-
-        console.log("Onboarding completo?", onboardingComplete);
-
-        if (onboardingComplete) {
-          console.log("Redirecionando → /admin/dashboard");
-          router.push("/admin/dashboard");
-        } else {
-          console.log("Redirecionando → /onboarding");
-          router.push("/onboarding");
-        }
-      }
-
-      setIsChecking(false);
-    };
-
-    handleRedirect();
-  }, [status, session, router]);
-
-  if (status === "loading" || isChecking) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-muted">
-        <p className="text-muted-foreground">A autenticar...</p>
-      </div>
-    );
-  }
+    if (onboardingComplete) {
+      console.log("Redirecionando para: / (Página Principal)");
+      router.push('/');
+    } else {
+      console.log("Redirecionando para: /onboarding (Assistente)");
+      router.push('/onboarding');
+    }
+  }, [router]);
 
   return (
     <div className="flex h-screen w-full items-center justify-center bg-muted">
-      <p className="text-muted-foreground">Redirecionando...</p>
+      <p className="text-muted-foreground">A autenticar...</p>
     </div>
   );
 }

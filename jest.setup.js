@@ -1,17 +1,17 @@
 // jest.setup.js
 
-// 1️⃣ Adiciona matchers do jest-dom (para testes de componentes React)
+// 1. Adiciona matchers do jest-dom
 import '@testing-library/jest-dom';
 
-// 2️⃣ Importa ferramentas de limpeza e hooks do Jest
+// 2. Importa as ferramentas de limpeza e hooks do Jest
 import { cleanup } from '@testing-library/react';
-import { afterEach, afterAll } from '@jest/globals';
+import { afterEach, afterAll } from '@jest/globals'; // ✅ Adicionado 'afterAll'
 
-// 3️⃣ Desconexão do Prisma após todos os testes (evita avisos de processos abertos)
+// ✅ 3. Adicionado para a lógica de desconexão do Prisma
 import { prisma } from './src/lib/prisma';
 
-// --- 🌐 Polyfills para ambiente Node.js em testes ---
-// Necessários para o Next.js e Fetch API funcionar no Jest
+// --- Polyfills para o ambiente de teste do Node.js ---
+// (Esta seção permanece igual ao que tinhas)
 import { TextEncoder, TextDecoder } from 'util';
 import { ReadableStream } from 'node:stream/web';
 import { MessageChannel } from 'node:worker_threads';
@@ -34,29 +34,27 @@ global.Headers = Headers;
 global.FormData = FormData;
 global.fetch = fetch;
 
-// --- 🧩 Mocks para APIs do Browser usadas pelo Next.js ---
-// Só executa essas partes se o ambiente de teste tiver 'window' (jsdom)
-if (typeof window !== 'undefined') {
-  // Simula o IntersectionObserver usado internamente por <Link>
-  const mockIntersectionObserver = jest.fn(() => ({
-    observe: () => null,
-    unobserve: () => null,
-    disconnect: () => null,
-  }));
 
-  window.IntersectionObserver = mockIntersectionObserver;
+// --- Mocks para APIs do Browser ---
+// (Esta seção permanece igual ao que tinhas)
 
-  // Simula requestIdleCallback e cancelIdleCallback (evita warnings com <Link>)
-  global.requestIdleCallback = jest.fn((callback) => {
-    callback({ didTimeout: false, timeRemaining: () => 50 });
-    return 1;
-  });
+// Simula a IntersectionObserver para o <Link> do Next.js
+const mockIntersectionObserver = jest.fn();
+mockIntersectionObserver.mockReturnValue({
+  observe: () => null,
+  unobserve: () => null,
+  disconnect: () => null,
+});
+window.IntersectionObserver = mockIntersectionObserver;
 
-  global.cancelIdleCallback = jest.fn();
-}
+// Simula requestIdleCallback para evitar avisos de "act(...)" com o <Link> do Next.js
+global.requestIdleCallback = jest.fn((callback) => {
+  callback({ didTimeout: false, timeRemaining: () => 50 });
+  return 1;
+});
 
-// --- 🔗 Mocks de módulos do Next.js ---
-// Mock básico de next/link
+global.cancelIdleCallback = jest.fn();
+
 jest.mock('next/link', () => {
   return ({ href, children, ...rest }) => {
     return (
@@ -67,39 +65,17 @@ jest.mock('next/link', () => {
   };
 });
 
-// Mock de next/router (para versões antigas)
-jest.mock('next/router', () => ({
-  useRouter: () => ({
-    route: '/',
-    pathname: '/',
-    query: {},
-    asPath: '/',
-    push: jest.fn(),
-    replace: jest.fn(),
-    prefetch: jest.fn(),
-  }),
-}));
 
-// Mock de next/navigation (para App Router)
-jest.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: jest.fn(),
-    replace: jest.fn(),
-    refresh: jest.fn(),
-  }),
-  usePathname: () => '/',
-  useSearchParams: () => ({
-    get: jest.fn(),
-  }),
-}));
+// --- Lógica de Limpeza dos Testes ---
 
-// --- 🧹 Limpeza dos testes ---
-// Limpa o DOM após cada teste (boa prática com React Testing Library)
+// Executa a limpeza do React Testing Library após cada teste
 afterEach(() => {
   cleanup();
 });
 
-// Fecha a conexão com o Prisma após todos os testes (evita travamentos e avisos)
+// ✅ 4. CÓDIGO ADICIONADO: Desconecta o Prisma após TODOS os testes
+// Esta função é executada uma única vez, garantindo que a conexão com a base de dados
+// é encerrada de forma limpa, resolvendo o aviso "worker process has failed to exit gracefully".
 afterAll(async () => {
   await prisma.$disconnect();
 });
