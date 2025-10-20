@@ -6,13 +6,12 @@ import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { ArrowRight, CheckCircle, X } from "lucide-react";
+import { ArrowRight, CheckCircle, X, Loader2, AlertCircle } from "lucide-react"; // 1. Importar Loader2 e AlertCircle
 import Image from "next/image";
-// ✅ CORREÇÃO: A importação do 'Link' foi removida.
 
 type OnboardingData = {
   businessName: string;
-  logoFile: File | null;
+  logoFile: File | null; // Nota: O upload de ficheiros ainda não está implementado na API
   categories: string[];
   product: { name: string; imageFile: File | null; price: string; };
 };
@@ -21,11 +20,15 @@ export function OnboardingWizard() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [data, setData] = useState<OnboardingData>({
-    businessName: "",
+    businessName: "Minha Loja",
     logoFile: null,
-    categories: [],
-    product: { name: "", imageFile: null, price: "" },
+    categories: ["Copos", "Canecas"],
+    product: { name: "Copo Long Drink", imageFile: null, price: "9.99" },
   });
+
+  // 2. Novos estados para feedback da API
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [productImagePreview, setProductImagePreview] = useState<string | null>(null);
@@ -57,14 +60,46 @@ export function OnboardingWizard() {
   const nextStep = () => setStep((s) => s + 1);
   const prevStep = () => setStep((s) => s - 1);
 
-  const handleSubmit = () => {
-    console.log("Dados Finais a serem enviados para a base de dados:", data);
-    nextStep();
+  // 3. Função handleSubmit ATUALIZADA
+  const handleSubmit = async () => {
+    setIsLoading(true);
+    setError(null);
+    console.log("A enviar dados do onboarding para a API:", data);
+
+    try {
+      // 4. Chamar a nossa nova API
+      const response = await fetch('/api/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: data.businessName,
+          categories: data.categories,
+          product: data.product,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Falha ao guardar os dados.");
+      }
+
+      // Se correu bem, avança para o ecrã de sucesso
+      nextStep();
+
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  // 5. Função de finalização ATUALIZADA
   const handleFinishOnboarding = () => {
-    localStorage.setItem('onboardingComplete', 'true');
-    router.push('/');
+    // A API já marcou o onboarding como completo.
+    // ✅ REMOVIDA a linha: localStorage.setItem('onboardingComplete', 'true');
+    // Redireciona para o Dashboard, pois é o destino lógico após o onboarding.
+    router.push('/admin/dashboard');
   };
 
   return (
@@ -76,7 +111,7 @@ export function OnboardingWizard() {
             <p className="text-muted-foreground mb-6">Qual é a identidade do seu negócio?</p>
             <div className="space-y-4">
               <div><Label htmlFor="businessName">Nome do Negócio</Label><Input id="businessName" value={data.businessName} onChange={e => setData({ ...data, businessName: e.target.value })} /></div>
-              <div><Label>Logótipo</Label><Input id="logo" type="file" accept="image/*" onChange={handleLogoChange} className="mb-2" />{logoPreview && <Image src={logoPreview} alt="Pré-visualização do logótipo" width={100} height={100} className="rounded-md" />}</div>
+              <div><Label>Logótipo (Upload será implementado em RF08)</Label><Input id="logo" type="file" accept="image/*" onChange={handleLogoChange} className="mb-2" disabled />{logoPreview && <Image src={logoPreview} alt="Pré-visualização do logótipo" width={100} height={100} className="rounded-md" />}</div>
             </div>
             <Button onClick={nextStep} className="mt-6 w-full">Continuar <ArrowRight className="ml-2 h-4 w-4" /></Button>
           </div>
@@ -97,9 +132,25 @@ export function OnboardingWizard() {
             <div className="space-y-4">
               <div><Label htmlFor="productName">Nome do Produto</Label><Input id="productName" value={data.product.name} onChange={e => setData(prev => ({ ...prev, product: { ...prev.product, name: e.target.value } }))} /></div>
               <div><Label htmlFor="productPrice">Preço Inicial (Ex: 9.99)</Label><Input id="productPrice" type="number" value={data.product.price} onChange={e => setData(prev => ({ ...prev, product: { ...prev.product, price: e.target.value } }))} /></div>
-              <div><Label>Imagem do Produto</Label><Input id="productImage" type="file" accept="image/*" onChange={handleProductImageChange} className="mb-2" />{productImagePreview && <Image src={productImagePreview} alt="Preview do produto" width={100} height={100} className="rounded-md" />}</div>
+              <div><Label>Imagem do Produto (Upload será implementado em RF08)</Label><Input id="productImage" type="file" accept="image/*" onChange={handleProductImageChange} className="mb-2" disabled />{productImagePreview && <Image src={productImagePreview} alt="Preview do produto" width={100} height={100} className="rounded-md" />}</div>
             </div>
-            <div className="flex w-full gap-2 mt-6"><Button variant="outline" onClick={prevStep} className="w-1/2">Voltar</Button><Button onClick={handleSubmit} className="w-1/2">Finalizar <ArrowRight className="ml-2 h-4 w-4" /></Button></div>
+
+            {/* 6. Exibir mensagem de erro da API */}
+            {error && (
+              <div role="alert" className="flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-4">
+                <AlertCircle className="h-4 w-4" />
+                <p>{error}</p>
+              </div>
+            )}
+
+            <div className="flex w-full gap-2 mt-6">
+              <Button variant="outline" onClick={prevStep} className="w-1/2" disabled={isLoading}>Voltar</Button>
+              {/* 7. Botão de Finalizar com estado de loading */}
+              <Button onClick={handleSubmit} className="w-1/2" disabled={isLoading}>
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Finalizar'}
+                {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
+              </Button>
+            </div>
           </div>
         )}
         {step === 4 && (
@@ -107,11 +158,8 @@ export function OnboardingWizard() {
             <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
             <h2 className="text-2xl font-bold">Tudo pronto!</h2>
             <p className="text-muted-foreground mt-2">O seu catálogo foi criado com sucesso.</p>
-            <div className="my-6">
-              <p className="text-sm">O seu link público é:</p>
-              <a href="#" className="font-mono text-primary hover:underline">seusite.com/{data.businessName.toLowerCase().replace(/\s+/g, '-')}</a>
-            </div>
-            <Button className="w-full" onClick={handleFinishOnboarding}>Concluir e Ver meu Catálogo</Button>
+            <p className="text-muted-foreground mt-2">Pode agora aceder ao seu painel de controlo.</p>
+            <Button className="w-full mt-8" onClick={handleFinishOnboarding}>Aceder ao Painel</Button>
           </div>
         )}
       </div>
