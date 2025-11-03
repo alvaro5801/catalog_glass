@@ -1,12 +1,15 @@
 // src/app/admin/categories/__tests__/page.test.tsx
 import React from 'react';
-// Importar o 'within' para buscas mais precisas
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+// ✅ Importámos o 'act' (da branch main)
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import CategoriesPage from '@/app/admin/categories/page';
 
-// --- SIMULAÇÃO (MOCK) DA API FETCH ---
+// Simulação global do fetch
 global.fetch = jest.fn();
 const mockFetch = global.fetch as jest.Mock;
+
+// ✅ Adicionámos os temporizadores (da branch main)
+jest.useFakeTimers();
 
 describe('CategoriesPage - Gestão de Categorias', () => {
 
@@ -14,10 +17,19 @@ describe('CategoriesPage - Gestão de Categorias', () => {
     mockFetch.mockClear();
   });
 
+  // ✅ Adicionámos o 'afterEach' e 'afterAll' (da branch main)
+  afterEach(() => {
+    jest.clearAllTimers();
+  });
+
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
   // --- Testes de Sucesso ---
 
   it('deve carregar e exibir as categorias iniciais da API', async () => {
-    // ✅ CORREÇÃO: Simular a API do Prisma (array de objetos)
+    // ✅ Usámos o mock de objetos (da branch feature/test)
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [
@@ -38,8 +50,8 @@ describe('CategoriesPage - Gestão de Categorias', () => {
     expect(screen.getByText("Comidas")).toBeInTheDocument();
   });
 
-  it('deve permitir adicionar uma nova categoria', async () => {
-    // ✅ CORREÇÃO: Simular a API do Prisma (array de objetos)
+  it('deve permitir adicionar uma nova categoria e limpar a mensagem de sucesso', async () => {
+    // ✅ Usámos o mock de objetos (da branch feature/test)
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [{ id: 'c1', name: 'Bebidas' }],
@@ -48,27 +60,32 @@ describe('CategoriesPage - Gestão de Categorias', () => {
     render(<CategoriesPage />);
     await screen.findByText("Bebidas");
 
-    // ✅ CORREÇÃO: Mock da resposta do POST
-    // A API do Prisma (e o componente) espera o *novo objeto* de volta
+    // ✅ Usámos o mock de objeto no POST (da branch feature/test)
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ id: 'c2', name: 'Decoração' }), // API POST
     });
 
-    const input = screen.getByRole('textbox');
-    fireEvent.change(input, { target: { value: 'Decoração' } });
-
-    const addButton = screen.getByRole('button', { name: /Adicionar/i });
-    fireEvent.click(addButton);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Decoração' } });
+    fireEvent.click(screen.getByRole('button', { name: /Adicionar/i }));
 
     // Espera pela nova categoria e pela mensagem de sucesso
     const newCategoryItem = await screen.findByText("Decoração");
     expect(newCategoryItem).toBeInTheDocument();
     expect(await screen.findByText('Categoria adicionada com sucesso!')).toBeInTheDocument();
+
+    // ✅ Adicionámos o teste do temporizador (da branch main)
+    act(() => {
+      jest.runAllTimers();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Categoria adicionada com sucesso!/i)).not.toBeInTheDocument();
+    });
   });
 
-  it('deve permitir apagar uma categoria', async () => {
-    // ✅ CORREÇÃO: Simular a API do Prisma (array de objetos)
+  it('deve permitir apagar uma categoria e limpar a mensagem de sucesso', async () => {
+    // ✅ Usámos o mock de objetos (da branch feature/test)
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [
@@ -80,7 +97,7 @@ describe('CategoriesPage - Gestão de Categorias', () => {
     render(<CategoriesPage />);
     await screen.findByText("Para Apagar");
 
-    // Mock da resposta do DELETE (componente espera string[], está correto)
+    // Mock da resposta do DELETE (correto em ambas as branches)
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ["Bebidas"], // API [name]/route.ts retorna a lista
@@ -89,7 +106,7 @@ describe('CategoriesPage - Gestão de Categorias', () => {
     const categoryItem = screen.getByText("Para Apagar");
     const row = categoryItem.closest('div')!;
     
-    // Procura o botão pelo aria-label (como no componente)
+    // ✅ Usámos o seletor mais específico (da branch feature/test)
     const deleteButton = within(row).getByRole('button', { name: /Apagar Para Apagar/i });
     
     fireEvent.click(deleteButton);
@@ -100,9 +117,18 @@ describe('CategoriesPage - Gestão de Categorias', () => {
     });
     expect(await screen.findByText('Categoria apagada com sucesso!')).toBeInTheDocument();
     expect(screen.getByText("Bebidas")).toBeInTheDocument();
+
+    // ✅ Adicionámos o teste do temporizador (da branch main)
+    act(() => {
+      jest.runAllTimers();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Categoria apagada com sucesso!/i)).not.toBeInTheDocument();
+    });
   });
 
-  // --- Testes de Erro ---
+  // --- Testes de Erro (Mantidos da branch feature/test) ---
   
   it('deve exibir uma mensagem de erro se o carregamento inicial (GET) falhar', async () => {
     // Simular uma falha na API
@@ -124,7 +150,7 @@ describe('CategoriesPage - Gestão de Categorias', () => {
   });
 
   it('deve exibir uma mensagem de erro se a adição (POST) falhar', async () => {
-    // ✅ CORREÇÃO: Simular a API do Prisma (array de objetos)
+    // ✅ Usámos o mock de objetos (da branch feature/test)
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [{ id: 'c1', name: 'Bebidas' }],
@@ -149,7 +175,7 @@ describe('CategoriesPage - Gestão de Categorias', () => {
   });
 
   it('deve exibir uma mensagem de erro se a edição (PUT) falhar', async () => {
-    // ✅ CORREÇÃO: Simular a API do Prisma (array de objetos)
+    // ✅ Usámos o mock de objetos (da branch feature/test)
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [{ id: 'c1', name: 'Bebidas' }],

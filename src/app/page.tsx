@@ -4,6 +4,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import PageLayout from "./page-layout";
 import Link from "next/link";
 import { Button } from "../components/ui/button";
+import React from 'react'; // Importar React para 'React.ElementType'
 import { Search, PenSquare, MessageCircle, GlassWater, Wine, Coffee } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -15,11 +16,8 @@ import { CategoryService } from "@/domain/services/CategoryService";
 import type { Product as PrismaProduct, Specification, PriceTier } from '@prisma/client';
 import type { Product as CardProductType } from "@/lib/types";
 
-// ✅ --- CORREÇÃO AQUI ---
-// Esta linha força a página a ser renderizada dinamicamente (no servidor, a cada pedido)
-// Isto garante que a 'DATABASE_URL' estará disponível quando o Prisma for chamado.
+// 2. Forçar a página a ser dinâmica (para corrigir o erro de build)
 export const dynamic = 'force-dynamic';
-// --- FIM DA CORREÇÃO ---
 
 // Tipo helper para o que o nosso ProductService realmente retorna
 type ProductWithRelations = PrismaProduct & {
@@ -27,9 +25,10 @@ type ProductWithRelations = PrismaProduct & {
     priceTable: PriceTier[];
 };
 
-// 2. A página agora é um Server Component (async)
+// 3. A página agora é um Server Component (async)
 export default async function Home() {
-  // Instanciar serviços para buscar dados
+  
+  // 4. Instanciar serviços e buscar dados
   const productRepository = new ProductRepository();
   const productService = new ProductService(productRepository);
   const categoryRepository = new CategoryRepository();
@@ -37,11 +36,10 @@ export default async function Home() {
 
   const MOCK_CATALOG_ID = "clxrz8hax00003b6khe69046c";
 
-  // Buscar todos os produtos e categorias
   const allProducts = await productService.getProducts(MOCK_CATALOG_ID);
   const allCategories = await categoryService.getAllCategories(MOCK_CATALOG_ID);
 
-  // Filtrar produtos em destaque no servidor
+  // 5. Definir variáveis com base nos dados buscados
   const featuredProducts = allProducts.filter(product => product.isFeatured);
 
   // Lógica de ícones
@@ -58,10 +56,13 @@ export default async function Home() {
     Squeezes: 'group-hover:text-lime-500',
   };
 
-  // Função para converter o produto do formato Prisma para o formato Card
+  // 6. Função de formatação (necessária para o ProductCard)
   const formatProductForCard = (product: ProductWithRelations): CardProductType => {
     return {
-      id: 0, // O Card não usa ID, mas o tipo exige 'number'.
+      // ✅ --- CORREÇÃO AQUI ---
+      // O 'id' do produto vindo do Prisma já é uma 'string'.
+      id: product.id, 
+      // --- FIM DA CORREÇÃO ---
       slug: product.slug,
       name: product.name,
       images: product.images,
@@ -73,6 +74,8 @@ export default async function Home() {
       priceInfo: product.priceInfo || '',
     };
   };
+
+  // 7. A lógica 'useRef' e 'useScroll' foi removida (era da versão antiga)
 
   return (
     <PageLayout>
@@ -97,7 +100,7 @@ export default async function Home() {
         <div className="absolute inset-0 z-0 bg-black/40" />
       </section>
 
-      {/* Secção 2: Como Funciona */}
+      {/* Secção 2: Como Funciona (ícones importados) */}
       <section id="como-funciona" className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-2xl mx-auto"><h2 className="text-3xl md:text-4xl font-bold">Personalize em Apenas 3 Passos</h2><p className="mt-4 text-muted-foreground">O nosso processo é simples e rápido, pensado para si.</p></div>
@@ -109,7 +112,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 3. A seção de destaques */}
+      {/* Secção 3: Produtos em Destaque */}
       {featuredProducts.length > 0 && (
         <section className="py-20 bg-muted">
           <div className="container mx-auto px-4">
@@ -122,7 +125,6 @@ export default async function Home() {
                 <CarouselContent>
                   {featuredProducts.map((product) => (
                     <CarouselItem key={product.id} className="sm:basis-1/2 lg:basis-1/4">
-                      {/* Usamos a nossa função de formatação correta */}
                       <div className="p-1"><ProductCard product={formatProductForCard(product)} /></div>
                     </CarouselItem>
                   ))}
@@ -135,7 +137,7 @@ export default async function Home() {
         </section>
       )}
 
-      {/* 4. A seção de categorias */}
+      {/* Secção 4: Navegue por Categoria */}
       <section className="bg-white py-20">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-2xl mx-auto"><h2 className="text-3xl md:text-4xl font-bold">Navegue por Categoria</h2><p className="mt-4 text-muted-foreground">Encontre exatamente o que precisa de forma rápida e fácil.</p></div>

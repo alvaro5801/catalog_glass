@@ -1,6 +1,6 @@
 // src/components/__tests__/OnboardingWizard.test.tsx
 import React from 'react';
-// ✅ CORREÇÃO: 'waitFor' foi removido desta linha.
+// O que foi corrigido: 'waitFor' foi removido da linha abaixo.
 import { render, screen, fireEvent } from '@testing-library/react';
 import { OnboardingWizard } from '../onboarding-wizard';
 
@@ -14,14 +14,12 @@ jest.mock('next/navigation', () => ({
 const mockSetItem = jest.fn();
 Object.defineProperty(window, 'localStorage', {
   value: {
-    setItem: (...args: [string, string]) => mockSetItem(...args),
+    setItem: (key: string, value: string) => mockSetItem(key, value),
   },
   writable: true,
 });
 
-
 describe('OnboardingWizard Component', () => {
-
   beforeEach(() => {
     mockPush.mockClear();
     mockSetItem.mockClear();
@@ -48,6 +46,9 @@ describe('OnboardingWizard Component', () => {
     await screen.findByText(/Tudo pronto!/i);
     fireEvent.click(screen.getByRole('button', { name: /Concluir e Ver meu Catálogo/i }));
 
+    // Verificações Finais
+    // O 'waitFor' não é necessário aqui porque o 'findBy' já espera e o clique final
+    // não tem mais atualizações de estado assíncronas para esperar no teste.
     expect(mockSetItem).toHaveBeenCalledWith('onboardingComplete', 'true');
     expect(mockPush).toHaveBeenCalledWith('/');
   });

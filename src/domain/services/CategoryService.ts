@@ -62,6 +62,9 @@ export class CategoryService {
       throw new Error("Categoria não encontrada para ser apagada.");
     }
 
+    // ✅ Comentário útil da branch 'main'
+    // TODO: No futuro, adicionar regra de negócio para não apagar categorias com produtos associados.
+
     // Se passar, apagar
     await this.categoryRepository.delete(categoryToDelete.id);
   }

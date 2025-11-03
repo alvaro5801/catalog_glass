@@ -1,22 +1,36 @@
 // src/app/admin/dashboard/page.tsx
 import { Button } from "@/components/ui/button";
-import { products } from "@/data/products";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowUpRight, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
-export default function DashboardPage() {
-  // Simulando dados dinâmicos
-  const totalProducts = products.length;
-  
-  // ✅ --- CORREÇÃO AQUI ---
-  // Trocámos [...new Set(...)] por Array.from(new Set(...))
-  // para ser compatível com a configuração do TypeScript.
-  const totalCategories = Array.from(new Set(products.map(p => p.category))).length;
-  // --- FIM DA CORREÇÃO ---
+// ✅ 1. Importar os Serviços e Tipos
+import { ProductRepository } from "@/domain/repositories/ProductRepository";
+import { ProductService } from "@/domain/services/ProductService";
+import { CategoryRepository } from "@/domain/repositories/CategoryRepository";
+import { CategoryService } from "@/domain/services/CategoryService";
+import type { Product as PrismaProduct, Category as PrismaCategory } from "@prisma/client";
 
-  const recentProducts = products.slice(0, 4); // Pegar os 4 primeiros como "recentes"
+// ✅ 2. A página agora é um Server Component 'async'
+export default async function DashboardPage() {
+  
+  // ✅ 3. Instanciar serviços e buscar dados
+  const productRepository = new ProductRepository();
+  const productService = new ProductService(productRepository);
+  const categoryRepository = new CategoryRepository();
+  const categoryService = new CategoryService(categoryRepository);
+
+  // TODO: Substituir pelo ID do catálogo do utilizador
+  const MOCK_CATALOG_ID = "clxrz8hax00003b6khe69046c";
+
+  const allProducts = await productService.getProducts(MOCK_CATALOG_ID);
+  const allCategories = await categoryService.getAllCategories(MOCK_CATALOG_ID);
+
+  // ✅ 4. Usar as variáveis que acabámos de buscar
+  const totalProducts = allProducts.length;
+  const totalCategories = allCategories.length; // Lógica corrigida
+  const recentProducts = allProducts.slice(0, 4); // Pegar os 4 primeiros como "recentes"
 
   return (
     <div className="space-y-6">
@@ -61,11 +75,12 @@ export default function DashboardPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {recentProducts.map((product) => (
+            {/* ✅ 5. Usar 'PrismaProduct' e 'allCategories' aqui */}
+            {recentProducts.map((product: PrismaProduct) => (
               <TableRow key={product.id}>
                 <TableCell>
                   <Image
-                    src={product.images[0]}
+                    src={product.images[0] || '/images/placeholder.png'} // Adicionar uma imagem de fallback
                     alt={product.name}
                     width={40}
                     height={40}
@@ -73,7 +88,8 @@ export default function DashboardPage() {
                   />
                 </TableCell>
                 <TableCell className="font-medium">{product.name}</TableCell>
-                <TableCell>{product.category}</TableCell>
+                {/* O produto do Prisma tem 'categoryId'. Precisamos de encontrar o nome da categoria. */}
+                <TableCell>{allCategories.find(c => c.id === product.categoryId)?.name || 'Sem categoria'}</TableCell>
               </TableRow>
             ))}
           </TableBody>

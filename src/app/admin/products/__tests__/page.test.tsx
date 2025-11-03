@@ -74,7 +74,7 @@ describe('ProductsPage - Gestão de Produtos', () => {
     expect(screen.getByText("Copo Long Drink")).toBeInTheDocument();
     expect(screen.getByText("Copos")).toBeInTheDocument();
     
-    // ✅ ESTE TESTE AGORA DEVE PASSAR (graças à correção no page.tsx)
+    // ESTE TESTE AGORA DEVE PASSAR (graças à correção no page.tsx)
     expect(screen.getByText("R$ 3.50")).toBeInTheDocument();
   });
 
@@ -96,11 +96,9 @@ describe('ProductsPage - Gestão de Produtos', () => {
     // Clicar no <SelectTrigger> para abrir as opções
     fireEvent.click(screen.getByRole('combobox'));
     
-    // ✅ --- CORREÇÃO DO SELETOR (Erro 2) ---
     // Usamos 'findByRole' com 'option' que é mais específico para
     // itens de uma lista Radix, evitando a ambiguidade.
     fireEvent.click(await screen.findByRole('option', { name: 'Taças' }));
-    // --- FIM DA CORREÇÃO ---
 
     // Simular a resposta da API (POST)
     const newProduct: ProductWithRelations = {
@@ -126,7 +124,6 @@ describe('ProductsPage - Gestão de Produtos', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Salvar/i }));
     
-    // ✅ --- CORREÇÃO DAS ASSERÇÕES FINAIS ---
     // 1. Esperamos o nome "Caneca Nova" aparecer
     const newProductCell = await screen.findByText('Caneca Nova');
     
@@ -137,7 +134,6 @@ describe('ProductsPage - Gestão de Produtos', () => {
     expect(within(newRow!).getByAltText('Caneca Nova')).toBeInTheDocument();
     expect(within(newRow!).getByText('Taças')).toBeInTheDocument();
     expect(within(newRow!).getByText('R$ 15.99')).toBeInTheDocument();
-    // --- FIM DA CORREÇÃO ---
   });
 
   it('deve permitir apagar um produto', async () => {
