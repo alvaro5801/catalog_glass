@@ -48,24 +48,16 @@ export default function CategoriesPage() {
             try {
                 const response = await fetch('/api/categories');
                 
-                // ✅ --- CORREÇÃO APLICADA AQUI ---
-                // Adicionámos esta verificação, igual à da página de produtos
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.details || 'Falha ao buscar categorias');
                 }
-                // --- FIM DA CORREÇÃO ---
                 
                 const data = await response.json();
                 
-                // ✅ CORREÇÃO 2: A API /api/categories/route.ts retorna objetos
-                // (ex: { id: "...", name: "..." }), não strings.
-                // Precisamos de extrair apenas os nomes para esta UI.
                 if (Array.isArray(data)) {
-                    // Se a API real (Prisma) está a ser usada, 'data' é Category[]
                     setCategories(data.map((cat: { id: string, name: string }) => cat.name));
                 } else {
-                    // Fallback para os dados antigos (se necessário)
                     setCategories(data);
                 }
 
@@ -96,15 +88,15 @@ export default function CategoriesPage() {
                 throw new Error(errorData.error || 'Falha ao adicionar');
             }
             
-            // ✅ CORREÇÃO 3: A API retorna o *novo objeto* criado.
-            // Devemos atualizar o estado com base no nome dele.
             const newCategoryData = await response.json();
             setCategories(prev => [...prev, newCategoryData.name]); // Adicionar apenas o nome
             setNewCategory("");
             setFeedback({ type: 'success', message: 'Categoria adicionada com sucesso!' });
-        } catch (error: any) {
+        } catch (error: unknown) { // ✅ CORREÇÃO AQUI (linha 105)
             console.error("Erro:", error);
-            setFeedback({ type: 'error', message: error.message || 'Erro ao adicionar a categoria.' });
+            // Verifica se 'error' é um objeto Error antes de aceder a 'message'
+            const message = error instanceof Error ? error.message : 'Erro ao adicionar a categoria.';
+            setFeedback({ type: 'error', message: message });
         } finally {
             setLoadingAction({ action: null, target: null });
         }
@@ -115,13 +107,11 @@ export default function CategoriesPage() {
         setLoadingAction({ action: 'delete', target: categoryToDelete });
         setFeedback(null);
         try {
-            // A API de [name]/route.ts (a que usa o array 'data') está a ser usada aqui
             const response = await fetch(`/api/categories/${encodeURIComponent(categoryToDelete)}`, {
                 method: 'DELETE',
             });
             if (!response.ok) throw new Error('Falha ao apagar');
             
-            // ✅ CORREÇÃO 4: A API de delete retorna a lista ATUALIZADA de strings
             const updatedCategoriesList = await response.json();
             setCategories(updatedCategoriesList); // Usar a lista retornada
             setFeedback({ type: 'success', message: 'Categoria apagada com sucesso!' });
@@ -143,7 +133,6 @@ export default function CategoriesPage() {
         setLoadingAction({ action: 'edit', target: originalCategory });
         setFeedback(null);
         try {
-            // A API de [name]/route.ts (a que usa o array 'data') está a ser usada aqui
             const response = await fetch(`/api/categories/${encodeURIComponent(originalCategory)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -155,14 +144,15 @@ export default function CategoriesPage() {
                 throw new Error(errorData.error || 'Falha ao editar');
             }
 
-            // ✅ CORREÇÃO 5: A API de PUT retorna a lista ATUALIZADA de strings
             const updatedCategoriesList = await response.json();
             setCategories(updatedCategoriesList); // Usar a lista retornada
             setEditingCategory(null);
             setFeedback({ type: 'success', message: 'Categoria atualizada com sucesso!' });
-        } catch (error: any) {
+        } catch (error: unknown) { // ✅ CORREÇÃO AQUI (linha 163)
             console.error("Erro:", error);
-            setFeedback({ type: 'error', message: error.message || 'Erro ao atualizar a categoria.' });
+            // Verifica se 'error' é um objeto Error antes de aceder a 'message'
+            const message = error instanceof Error ? error.message : 'Erro ao atualizar a categoria.';
+            setFeedback({ type: 'error', message: message });
         } finally {
             setLoadingAction({ action: null, target: null });
         }
@@ -192,7 +182,6 @@ export default function CategoriesPage() {
 
                 <h3 className="text-xl font-semibold mb-4 border-t pt-6">Categorias Existentes</h3>
                 <div className="space-y-2">
-                    {/* Agora esta linha está protegida pela verificação 'if (!response.ok)' */}
                     {categories.map((cat) => (
                         <div key={cat} className="flex items-center justify-between rounded-md bg-muted p-3">
                             {editingCategory === cat ? (

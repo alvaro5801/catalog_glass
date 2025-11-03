@@ -9,7 +9,13 @@ import Image from "next/image";
 export default function DashboardPage() {
   // Simulando dados dinâmicos
   const totalProducts = products.length;
-  const totalCategories = [...new Set(products.map(p => p.category))].length;
+  
+  // ✅ --- CORREÇÃO AQUI ---
+  // Trocámos [...new Set(...)] por Array.from(new Set(...))
+  // para ser compatível com a configuração do TypeScript.
+  const totalCategories = Array.from(new Set(products.map(p => p.category))).length;
+  // --- FIM DA CORREÇÃO ---
+
   const recentProducts = products.slice(0, 4); // Pegar os 4 primeiros como "recentes"
 
   return (
@@ -35,8 +41,6 @@ export default function DashboardPage() {
           </Link>
         </Button>
         
-        {/* --- ALTERAÇÃO AQUI --- */}
-        {/* Trocámos a tag <a> por <Link> e removemos o target="_blank" */}
         <Button size="lg" variant="outline" asChild>
           <Link href="/">
             Ver o meu Catálogo
