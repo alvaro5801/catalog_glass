@@ -1,59 +1,58 @@
 // src/app/api/products/[id]/route.ts
-import { NextResponse, type NextRequest } from 'next/server';
-import { products } from '@/data/products';
-import type { Product } from '@/lib/types';
+import { NextRequest, NextResponse } from "next/server";
+import { ProductRepository } from "@/domain/repositories/ProductRepository";
+import { ProductService } from "@/domain/services/ProductService";
 
-// --- FUNÇÃO GET ---
+// Instanciar as dependências, tal como fizemos nas outras rotas
+const productRepository = new ProductRepository();
+const productService = new ProductService(productRepository);
+
+// --- FUNÇÃO GET (Obter um produto por ID) ---
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> } // ✅ Tipagem compatível com Next 15
+  { params }: { params: { id: string } }
 ) {
-  const { id } = await context.params; // ✅ Necessário "await" no Next 15
-  const productId = parseInt(id, 10);
-  const product = products.find(p => p.id === productId);
-
-  if (!product) {
-    return NextResponse.json({ error: 'Produto não encontrado.' }, { status: 404 });
+  try {
+    const product = await productService.getProductById(params.id);
+    if (!product) {
+      return NextResponse.json({ error: "Produto não encontrado." }, { status: 404 });
+    }
+    return NextResponse.json(product);
+  } catch (error) {
+    const err = error as Error;
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
-
-  return NextResponse.json(product);
 }
 
-
-// --- FUNÇÃO PUT ---
+// --- FUNÇÃO PUT (Atualizar um produto) ---
 export async function PUT(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> } // ✅ Mesmo ajuste aqui
+  { params }: { params: { id: string } }
 ) {
-  const { id } = await context.params;
-  const productId = parseInt(id, 10);
-  const productData: Partial<Omit<Product, 'id'>> = await request.json();
-
-  const productIndex = products.findIndex(p => p.id === productId);
-
-  if (productIndex === -1) {
-    return NextResponse.json({ error: 'Produto não encontrado.' }, { status: 404 });
+  try {
+    const body = await request.json();
+    // A nossa camada de serviço já trata da lógica de encontrar e atualizar
+    const updatedProduct = await productService.updateProduct(params.id, body);
+    return NextResponse.json(updatedProduct);
+  } catch (error) {
+    const err = error as Error;
+    // Retornar um erro mais específico se o produto não for encontrado
+    const status = err.message.includes("not found") ? 404 : 400;
+    return NextResponse.json({ error: err.message }, { status });
   }
-
-  products[productIndex] = { ...products[productIndex], ...productData };
-
-  return NextResponse.json(products[productIndex]);
 }
 
-// --- FUNÇÃO DELETE ---
+// --- FUNÇÃO DELETE (Apagar um produto) ---
 export async function DELETE(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> } // ✅ E aqui também
+  { params }: { params: { id: string } }
 ) {
-  const { id } = await context.params;
-  const productId = parseInt(id, 10);
-  const productIndex = products.findIndex(p => p.id === productId);
-
-  if (productIndex === -1) {
-    return NextResponse.json({ error: 'Produto não encontrado.' }, { status: 404 });
+  try {
+    await productService.deleteProduct(params.id);
+    return new NextResponse(null, { status: 204 }); // Sucesso, sem conteúdo
+  } catch (error) {
+    const err = error as Error;
+    const status = err.message.includes("não encontrado") ? 404 : 400;
+    return NextResponse.json({ error: err.message }, { status });
   }
-
-  products.splice(productIndex, 1);
-
-  return new Response(null, { status: 204 });
 }

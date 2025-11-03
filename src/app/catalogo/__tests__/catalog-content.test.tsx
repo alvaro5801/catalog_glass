@@ -1,42 +1,60 @@
 // src/app/catalogo/__tests__/catalog-content.test.tsx
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CatalogContent } from '../catalog-content';
-import { products } from '@/data/products';
+import { FavoritesProvider } from '@/contexts/favorites-context';
 
-// Mock do 'useSearchParams' do Next.js, pois ele não funciona fora de um contexto de navegação
+global.fetch = jest.fn();
+const mockFetch = global.fetch as jest.Mock;
+
 jest.mock('next/navigation', () => ({
-  useSearchParams: () => ({
-    get: () => '',
-  }),
+  useSearchParams: () => ({ get: () => '' }),
 }));
 
-describe('CatalogContent Component', () => {
+const renderWithProvider = (component: React.ReactElement) => {
+  return render(<FavoritesProvider>{component}</FavoritesProvider>);
+};
 
-  it('deve exibir todos os produtos inicialmente', () => {
-    render(<CatalogContent />);
-    // Verifica se o número de cards de produtos na tela é igual ao total de produtos
-    const productCards = screen.getAllByRole('link', { name: /Valores/i });
-    expect(productCards).toHaveLength(products.length);
+describe('CatalogContent Component', () => {
+  beforeEach(() => {
+    mockFetch.mockClear();
   });
-  
-  it('deve filtrar os produtos ao clicar numa categoria', () => {
-    render(<CatalogContent />);
-    
-    // 1. Encontra e clica no botão da categoria "Taças"
-    const categoryButton = screen.getByRole('button', { name: /Taças/i });
+
+  it('deve exibir os produtos retornados pela API', async () => {
+    // ✅ CORREÇÃO: Fornecer um caminho de imagem válido nos dados de teste.
+    const mockProducts = [
+      { id: 'prod_1', name: 'Produto da API 1', categoryId: 'Cat 1', images: ['/test-image.jpg'] }
+    ];
+    const mockCategories = [{ name: 'Cat 1' }];
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: async () => mockProducts })
+      .mockResolvedValueOnce({ ok: true, json: async () => mockCategories });
+
+    renderWithProvider(<CatalogContent />);
+
+    expect(await screen.findByText('Produto da API 1')).toBeInTheDocument();
+    expect(screen.queryByText(/A carregar catálogo.../i)).not.toBeInTheDocument();
+  });
+
+  it('deve filtrar os produtos ao clicar numa categoria', async () => {
+    // ✅ CORREÇÃO: Fazer o mesmo ajuste aqui.
+    const mockProducts = [
+      { id: 'prod_1', name: 'Copo de Teste', categoryId: 'Copos', images: ['/copo.jpg'] },
+      { id: 'prod_2', name: 'Taça de Teste', categoryId: 'Taças', images: ['/taca.jpg'] }
+    ];
+    const mockCategories = [{ name: 'Copos' }, { name: 'Taças' }];
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: async () => mockProducts })
+      .mockResolvedValueOnce({ ok: true, json: async () => mockCategories });
+
+    renderWithProvider(<CatalogContent />);
+
+    const categoryButton = await screen.findByRole('button', { name: /Taças/i });
     fireEvent.click(categoryButton);
 
-    // 2. Conta quantos produtos da categoria "Taças" existem nos seus dados
-    const tacasProductsCount = products.filter(p => p.category === 'Taças').length;
-
-    // 3. Verifica se o número de produtos exibidos na tela agora é igual a 'tacasProductsCount'
-    const productCards = screen.getAllByRole('link', { name: /Valores/i });
-    expect(productCards).toHaveLength(tacasProductsCount);
-
-    // 4. (Opcional) Garante que um produto de outra categoria NÃO está visível
-    const copoElement = screen.queryByText(/Copo Long Drink/i);
-    expect(copoElement).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Taça de Teste/i)).toBeInTheDocument();
+      expect(screen.queryByText(/Copo de Teste/i)).not.toBeInTheDocument();
+    });
   });
-
 });

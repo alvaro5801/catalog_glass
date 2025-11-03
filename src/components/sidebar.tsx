@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-// ✅ CORREÇÃO: A importação de 'cn' foi removida.
+// O que foi corrigido: A importação de 'cn' foi removida.
 import { Button } from "./ui/button";
 import { LayoutDashboard, Package, FolderKanban, Settings } from "lucide-react";
 
