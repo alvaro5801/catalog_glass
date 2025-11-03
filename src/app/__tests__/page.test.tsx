@@ -1,132 +1,133 @@
 // src/app/__tests__/page.test.tsx
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import Home from '../page'; // Importa a tua página inicial
-import type { Product as PrismaProduct, Category as PrismaCategory, Specification, PriceTier } from '@prisma/client';
+// Importar Home aqui é normal, mas vamos recarregar dinamicamente no teste específico
+import Home from '../page';
+// Importar os produtos reais é necessário para o primeiro teste
+// import { products } from '@/data/products'; // Removido import global, importaremos dinamicamente
 
-// 1. Simular os Serviços
-const mockGetProducts = jest.fn();
-const mockGetCategories = jest.fn();
-
-jest.mock('@/domain/services/ProductService', () => {
-  return {
-    ProductService: jest.fn().mockImplementation(() => {
-      // Retornar apenas as funções usadas pela página Home
-      return { getProducts: mockGetProducts };
-    }),
-  };
-});
-// Mock do Repository (dependência interna do Serviço, precisa existir)
-jest.mock('@/domain/repositories/ProductRepository', () => ({
-  ProductRepository: jest.fn().mockImplementation(() => {}),
-}));
-
-
-jest.mock('@/domain/services/CategoryService', () => {
-  return {
-    CategoryService: jest.fn().mockImplementation(() => {
-      // Retornar apenas as funções usadas pela página Home
-      return { getAllCategories: mockGetCategories };
-    }),
-  };
-});
-// Mock do Repository (dependência interna do Serviço, precisa existir)
-jest.mock('@/domain/repositories/CategoryRepository', () => ({
-  CategoryRepository: jest.fn().mockImplementation(() => {}),
-}));
-
-// ✅ NOVO: Simular os componentes do Carrossel
-// Vamos substituir os componentes complexos por divs simples
+// Mocks de UI, Contextos, React Hooks, Framer Motion (Mantêm-se iguais)
 jest.mock('@/components/ui/carousel', () => ({
   Carousel: ({ children }: { children: React.ReactNode }) => <div data-testid="mock-carousel">{children}</div>,
   CarouselContent: ({ children }: { children: React.ReactNode }) => <div data-testid="mock-carousel-content">{children}</div>,
   CarouselItem: ({ children }: { children: React.ReactNode }) => <div data-testid="mock-carousel-item">{children}</div>,
-  CarouselNext: () => <button>Next</button>, // Placeholder simples
-  CarouselPrevious: () => <button>Previous</button>, // Placeholder simples
+  CarouselNext: () => <button>Next</button>,
+  CarouselPrevious: () => <button>Previous</button>,
 }));
-
-
-// Simular o componente PageLayout para simplificar o teste
 jest.mock('../page-layout', () => {
   return function MockPageLayout({ children }: { children: React.ReactNode }) {
     return <div>{children}</div>;
   };
 });
-
-// Simular o componente FavoritesProvider (necessário porque ProductCard o usa)
-jest.mock('@/contexts/favorites-context', () => ({
+jest.mock('../../contexts/favorites-context', () => ({ // Usando caminho relativo
   FavoritesProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   useFavorites: () => ({ favorites: [], toggleFavorite: jest.fn() }),
 }));
+jest.mock('react', () => ({
+  ...jest.requireActual('react'),
+  useRef: jest.fn(() => ({ current: null })),
+}));
+jest.mock('framer-motion', () => ({
+  ...jest.requireActual('framer-motion'),
+  useScroll: jest.fn(() => ({ scrollYProgress: { get: () => 0, onChange: () => {} } })),
+  useTransform: jest.fn((value, transform) => {
+    if (typeof transform === 'function') return { get: () => '0%', onChange: () => {} };
+    const outputValue = (transform && Array.isArray(transform) && transform.length > 1 && Array.isArray(transform[1]) && transform[1].length > 0)
+        ? transform[1][0]
+        : '0%';
+    return { get: () => outputValue, onChange: () => {} };
+  }),
+  motion: {
+      div: jest.fn(({ children, style, ...rest }) => <div {...rest}>{children}</div>)
+  }
+}));
 
+// Mock do 'next/link' (Mantém-se)
+jest.mock('next/link', () => {
+  // eslint-disable-next-line react/display-name
+  return ({ href, children }: { href: string, children: React.ReactNode }) => {
+    // Renderiza como uma tag <a> simples para que 'getByRole('link')' funcione
+    return <a href={href}>{children}</a>;
+  };
+});
 
-// 2. Dados de Teste
-const mockProducts: (PrismaProduct & { specifications: Specification | null; priceTable: PriceTier[] })[] = [
-  { id: 'prod_1', name: 'Copo Destaque 1', slug: 'copo-destaque-1', categoryId: 'cat_1', images: ['/img1.jpg'], isFeatured: true, shortDescription: '', description: '', priceInfo: '', catalogId: 'mock_catalog', specifications: null, priceTable: [] },
-  { id: 'prod_2', name: 'Copo Normal 2', slug: 'copo-normal-2', categoryId: 'cat_1', images: ['/img2.jpg'], isFeatured: false, shortDescription: '', description: '', priceInfo: '', catalogId: 'mock_catalog', specifications: null, priceTable: [] },
-  { id: 'prod_3', name: 'Taça Destaque 3', slug: 'taca-destaque-3', categoryId: 'cat_2', images: ['/img3.jpg'], isFeatured: true, shortDescription: '', description: '', priceInfo: '', catalogId: 'mock_catalog', specifications: null, priceTable: [] },
-];
+// ✅ --- NOVA CORREÇÃO AQUI ---
+// Adicionamos a simulação do 'next/image'
+jest.mock('next/image', () => ({
+  __esModule: true,
+  default: (props: any) => {
+    // Renderiza como uma tag <img> simples, removendo a complexidade do Next.js
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img {...props} />;
+  },
+}));
+// --- FIM DA CORREÇÃO ---
 
-const mockCategories: PrismaCategory[] = [
-  { id: 'cat_1', name: 'Copos', catalogId: 'mock_catalog' },
-  { id: 'cat_2', name: 'Taças', catalogId: 'mock_catalog' },
-];
 
 describe('Home Page (Server Component)', () => {
-
   beforeEach(() => {
-    // Limpar mocks antes de cada teste
-    mockGetProducts.mockClear();
-    mockGetCategories.mockClear();
+    // Limpar mocks do React/Framer-motion
+    (React.useRef as jest.Mock).mockClear();
+    (jest.requireMock('framer-motion').useScroll as jest.Mock).mockClear();
+    (jest.requireMock('framer-motion').useTransform as jest.Mock).mockClear();
+    // Resetar módulos para permitir que jest.doMock funcione isoladamente
+    jest.resetModules();
   });
 
-  it('deve renderizar os elementos principais e buscar dados dos serviços', async () => {
-    // Preparação: Definir o que os mocks vão retornar
-    mockGetProducts.mockResolvedValue(mockProducts);
-    mockGetCategories.mockResolvedValue(mockCategories);
+  it('deve renderizar os elementos principais usando os dados reais', async () => {
+    // Re-importar 'products' aqui para garantir que pegamos a versão não mockada após resetModules
+    const { products: actualProducts } = await import('@/data/products');
+    // Re-importar 'Home' para garantir que usa a versão não mockada dos produtos
+    const CurrentHome = (await import('../page')).default;
 
-    // Execução: Renderizar o Server Component (ele vai chamar os mocks)
-    // Server Components retornam uma Promise, então usamos 'await'
-    const resolvedComponent = await Home();
+    const resolvedComponent = await CurrentHome();
     render(resolvedComponent);
 
-    // Verificação:
-    // 1. Serviços foram chamados?
-    expect(mockGetProducts).toHaveBeenCalledTimes(1);
-    expect(mockGetCategories).toHaveBeenCalledTimes(1);
-
-    // 2. Elementos principais estão na página?
+    // Verificações principais (mantêm-se)
     expect(screen.getByRole('heading', { level: 1, name: /Transforme Momentos em Memórias/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Explorar Catálogo/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Personalize em Apenas 3 Passos/i })).toBeInTheDocument();
 
-    // 3. Produtos em destaque estão no carrossel? (Verificar pelos nomes)
-    // Agora que o carrossel está mockado, os itens ainda devem ser renderizados dentro dele.
-    expect(screen.getByRole('heading', { name: /Produtos em Destaque/i })).toBeInTheDocument();
-    expect(screen.getByText('Copo Destaque 1')).toBeInTheDocument();
-    expect(screen.getByText('Taça Destaque 3')).toBeInTheDocument();
-    // Garante que o produto não destacado NÃO está na secção de destaques (esta verificação pode falhar se o mock não isolar bem, mas vamos tentar)
-    // Se esta linha falhar, podemos removê-la, pois o mais importante é verificar se os destaques *estão* lá.
-    expect(screen.queryByText('Copo Normal 2')).not.toBeInTheDocument();
+    // Verificações dos produtos e categorias (mantêm-se, usando actualProducts)
+    const featuredProductsFromData = actualProducts.slice(0, 8);
+    if (featuredProductsFromData.length > 0) {
+        expect(screen.getByRole('heading', { name: /Os Mais Pedidos/i })).toBeInTheDocument();
+        expect(screen.getByText(actualProducts[0].name)).toBeInTheDocument();
+    } else {
+        expect(screen.queryByRole('heading', { name: /Os Mais Pedidos/i })).not.toBeInTheDocument();
+    }
 
-    // 4. Categorias estão a ser exibidas? (Verificar pelos links)
+    // --- ✅ CORREÇÃO APLICADA AQUI ---
+    // 1. Criar o Set
+    const uniqueCategories = new Set(actualProducts.map((product: any) => product.category));
+    // 2. Converter para Array usando Array.from()
+    const categoriesFromData = Array.from(uniqueCategories);
+    // ---------------------------------
+
     expect(screen.getByRole('heading', { name: /Navegue por Categoria/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Copos/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Taças/i })).toBeInTheDocument();
+    categoriesFromData.forEach(categoryName => {
+        // A busca por RegExp continua válida
+        expect(screen.getByRole('link', { name: new RegExp(categoryName, 'i') })).toBeInTheDocument();
+    });
   });
 
-   it('não deve renderizar a secção de destaques se nenhum produto for destacado', async () => {
-    // Preparação: Nenhum produto com isFeatured = true
-    const noFeaturedProducts = mockProducts.map(p => ({ ...p, isFeatured: false }));
-    mockGetProducts.mockResolvedValue(noFeaturedProducts);
-    mockGetCategories.mockResolvedValue(mockCategories);
+  it('não deve renderizar a secção de destaques se nenhum produto for destacado (usando dados reais)', async () => {
+    // Mockar os dados ANTES de importar o componente dentro do teste
+    jest.doMock('@/data/products', () => ({
+        __esModule: true,
+        products: []
+    }));
 
-    // Execução:
-    const resolvedComponent = await Home();
+    // Importar/Recarregar o componente Home AQUI, DEPOIS do doMock
+    const HomeWithEmptyData = (await import('../page')).default;
+
+    const resolvedComponent = await HomeWithEmptyData();
     render(resolvedComponent);
 
-    // Verificação:
-    expect(screen.queryByRole('heading', { name: /Produtos em Destaque/i })).not.toBeInTheDocument();
+    // A expectativa continua a mesma
+    expect(screen.queryByRole('heading', { name: /Os Mais Pedidos/i })).not.toBeInTheDocument();
+
+    // jest.unmock('@/data/products'); // O resetModules no beforeEach já cuida disso
   });
 
 });

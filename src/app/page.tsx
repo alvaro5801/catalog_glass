@@ -13,7 +13,12 @@ import PageLayout from "./page-layout"; // Importar o PageLayout
 
 export default function Home() {
   const featuredProducts = products.slice(0, 8);
-  const categories = [...new Set(products.map((product) => product.category))];
+  // ✅ --- CORREÇÃO APLICADA AQUI ---
+  // Trocamos "[...new Set(...)]" por "Array.from(new Set(...))"
+  // para garantir compatibilidade com targets mais antigos do TypeScript.
+  const categories = Array.from(new Set(products.map((product) => product.category)));
+  // --- FIM DA CORREÇÃO ---
+  
   const categoryIcons: { [key: string]: React.ElementType } = {
     Copos: GlassWater,
     Taças: Wine,
@@ -92,29 +97,33 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Secção 3: Produtos em Destaque */}
-      <section className="py-20">
-        {/* ... conteúdo da secção ... */}
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-2xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold">Os Mais Pedidos</h2>
-            <p className="mt-4 text-muted-foreground">Conheça os produtos favoritos dos nossos clientes.</p>
+      {/* A secção inteira só é renderizada se houver produtos para exibir */}
+      {featuredProducts.length > 0 && (
+        <section className="py-20">
+          {/* Secção 3: Produtos em Destaque */}
+          <div className="container mx-auto px-4">
+            <div className="text-center max-w-2xl mx-auto">
+              {/* Este h2 só será renderizado se featuredProducts.length > 0 */}
+              <h2 className="text-3xl md:text-4xl font-bold">Os Mais Pedidos</h2>
+              <p className="mt-4 text-muted-foreground">Conheça os produtos favoritos dos nossos clientes.</p>
+            </div>
+            <div className="mt-12">
+              <Carousel opts={{ align: "start", loop: true }} className="w-full max-w-sm md:max-w-2xl lg:max-w-5xl mx-auto">
+                <CarouselContent>
+                  {featuredProducts.map((product) => (
+                    <CarouselItem key={product.id} className="sm:basis-1/2 lg:basis-1/4">
+                      <div className="p-1"><ProductCard product={product} /></div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious className="hidden sm:inline-flex" />
+                <CarouselNext className="hidden sm:inline-flex" />
+              </Carousel>
+            </div>
           </div>
-          <div className="mt-12">
-            <Carousel opts={{ align: "start", loop: true }} className="w-full max-w-sm md:max-w-2xl lg:max-w-5xl mx-auto">
-              <CarouselContent>
-                {featuredProducts.map((product) => (
-                  <CarouselItem key={product.id} className="sm:basis-1/2 lg:basis-1/4">
-                    <div className="p-1"><ProductCard product={product} /></div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="hidden sm:inline-flex" />
-              <CarouselNext className="hidden sm:inline-flex" />
-            </Carousel>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
+      {/* --- FIM DA CORREÇÃO --- */}
 
       {/* Secção 4: Navegue por Categoria */}
       <section className="bg-muted py-20">

@@ -8,7 +8,6 @@ import type { CreateProductData } from '@/domain/interfaces/IProductRepository';
 jest.mock('@/domain/services/ProductService', () => {
   const mockGetProducts = jest.fn();
   const mockCreateProduct = jest.fn();
-  // Incluir mocks de outras funções para evitar erros de tipo, mesmo que não sejam usadas aqui
   const mockGetProductById = jest.fn();
   const mockUpdateProduct = jest.fn();
   const mockDeleteProduct = jest.fn();
@@ -37,11 +36,31 @@ const { mockGetProducts, mockCreateProduct } = __mocks__;
 const mockProduct: Product & { specifications: Specification | null; priceTable: PriceTier[] } = {
   id: 'prod_1', name: 'Copo Long Drink', slug: 'copo-long-drink', shortDescription: '...', description: '...', images: ['/img.jpg'], priceInfo: '...', isFeatured: false, categoryId: 'cat_1', catalogId: 'catalog_123', specifications: null, priceTable: [],
 };
+
+// --- ESTA É A CORREÇÃO ---
 const mockCreateData: CreateProductData = {
-  name: 'Novo Copo', slug: 'novo-copo', shortDescription: '...', description: '...', images: ['/novo.jpg'], priceInfo: '...', isFeatured: false, categoryId: 'cat_1', catalogId: 'catalog_123',
+  name: 'Novo Copo', slug: 'novo-copo', shortDescription: '...', description: '...', images: ['/novo.jpg'], priceInfo: '...', isFeatured: false,
+  // categoryId: 'cat_1', // <-- Erro aqui
+  // catalogId: 'catalog_123', // <-- E erro aqui
+
+  // Correção para 'categoryId'
+  category: {
+    connect: {
+      id: 'cat_1'
+    }
+  },
+  // Correção para 'catalogId'
+  catalog: {
+    connect: {
+      id: 'catalog_123'
+    }
+  },
+
   specifications: { create: { material: 'Novo', capacidade: '100ml', dimensoes: '10cm' } },
   priceTable: { create: [{ quantity: '1-10', price: 10 }] },
 };
+// --- FIM DA CORREÇÃO ---
+
 
 // --- Início dos Testes ---
 describe('API Route: /api/products', () => {
@@ -70,7 +89,7 @@ describe('API Route: /api/products', () => {
       const body = await response.json();
       // Verificar
       expect(response.status).toBe(500);
-      expect(body.error).toContain("Erro ao buscar produtos"); // Verificar mensagem de erro da rota
+      expect(body.error).toContain("Erro ao buscar produtos");
     });
   });
 
@@ -78,23 +97,23 @@ describe('API Route: /api/products', () => {
   describe('POST', () => {
     it('deve criar um novo produto e retornar 201', async () => {
       mockCreateProduct.mockResolvedValue(mockProduct); // Simular sucesso na criação
-      // Criar um objeto NextRequest simulado
+      
       const request = new NextRequest('http://localhost/api/products', {
         method: 'POST',
-        body: JSON.stringify(mockCreateData),
+        body: JSON.stringify(mockCreateData), // Usar os dados corrigidos
       });
-      const response = await POST(request); // Chamar a função POST da rota
+      const response = await POST(request);
       const body = await response.json();
       // Verificar
       expect(response.status).toBe(201);
       expect(body).toEqual(mockProduct);
-      expect(mockCreateProduct).toHaveBeenCalledWith(mockCreateData); // Verificar se o serviço foi chamado corretamente
+      expect(mockCreateProduct).toHaveBeenCalledWith(mockCreateData); // O serviço será chamado com os dados corretos
     });
 
     it('deve retornar 400 se a validação do serviço falhar (ex: nome curto)', async () => {
       const invalidData = { ...mockCreateData, name: 'A' };
-      // Simular o erro de validação vindo do serviço
       mockCreateProduct.mockRejectedValue(new Error("O nome do produto deve ter pelo menos 3 caracteres."));
+      
       const request = new NextRequest('http://localhost/api/products', {
         method: 'POST',
         body: JSON.stringify(invalidData),
@@ -103,7 +122,6 @@ describe('API Route: /api/products', () => {
       const body = await response.json();
       // Verificar
       expect(response.status).toBe(400);
-      // Verificar a mensagem de erro específica que a rota retorna neste caso
       expect(body.error).toBe("O nome do produto deve ter pelo menos 3 caracteres.");
     });
   });

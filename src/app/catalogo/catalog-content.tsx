@@ -8,11 +8,13 @@ import { ProductCard } from "../../components/product-card";
 import { Button } from "../../components/ui/button";
 
 export function CatalogContent() {
-  const allCategories = useMemo(() => [
-    "Todos",
-    ...new Set(products.map((product) => product.category)),
-  ], []);
-  
+  const allCategories = useMemo(() => {
+    // 1. Criar o Set de categorias únicas
+    const uniqueCategories = new Set(products.map((product) => product.category));
+    // 2. Converter o Set num Array e adicionar "Todos" no início
+    return ["Todos", ...Array.from(uniqueCategories)]; // ✅ CORREÇÃO AQUI
+  }, []);
+
   const [activeCategory, setActiveCategory] = useState("Todos");
   const searchParams = useSearchParams();
 

@@ -2,21 +2,31 @@
 const nextJest = require('next/jest');
 
 const createJestConfig = nextJest({
+  // Fornece o caminho para a sua aplicação Next.js
   dir: './',
 });
 
+/** @type {import('jest').Config} */
 const customJestConfig = {
-  // Garante que o nosso ficheiro de setup é executado antes de todos os testes
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  // Define a raiz do projeto
+  rootDir: '.', 
   
-  // O ambiente 'jsdom' é o correto para aplicações Next.js que testam tanto UI como API
+  // Ficheiros de setup (se você tiver um 'jest.setup.js', mantenha)
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'], 
+  
+  // O ambiente de teste
   testEnvironment: 'jest-environment-jsdom',
   
-  // Mapeia o atalho '@/' para a pasta 'src/'
+  // --- VERIFIQUE ESTA PARTE COM ATENÇÃO ---
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
+    // A regra para mapear '@/' para 'src/'
+    // Garanta que as aspas, barras e o '$1' estão corretos.
+    '^@/(.*)$': '<rootDir>/src/$1', 
   },
-  // A linha `preset: 'ts-jest'` foi REMOVIDA daqui para evitar conflitos.
+  
+  // Ajuda o Jest a encontrar módulos
+  moduleDirectories: ['node_modules', '<rootDir>/'], 
 };
 
+// Exporta a configuração final
 module.exports = createJestConfig(customJestConfig);
