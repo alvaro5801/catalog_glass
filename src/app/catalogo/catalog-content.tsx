@@ -43,7 +43,8 @@ export function CatalogContent() {
         // Isto garante que o objeto final corresponde sempre ao tipo 'Product'.
         const formattedProducts = productsData.map((p: ProductFromApi) => ({
           ...p,
-          category: p.categoryId,
+          // Nota: O tipo 'Product' espera 'category' como string (id), o que está correto.
+          category: p.categoryId, 
           specifications: p.specifications ?? { material: '', capacidade: '', dimensoes: '' },
         }));
 
@@ -75,9 +76,22 @@ export function CatalogContent() {
     if (activeCategory === "Todos") {
       return products;
     }
-    return products.filter((product) => product.category === activeCategory);
-  }, [activeCategory, products]);
+    // Usamos 'product.category' que agora é o 'categoryId' (string)
+    return products.filter((product) => {
+        // Encontramos o nome da categoria do produto para comparar
+        const categoryName = allCategories.find(name => 
+            categoriesData.find(c => c.name === name)?.id === product.category
+        );
+        return categoryName === activeCategory;
+    });
+    // ✅ CORREÇÃO: A lógica do filtro precisa de ser ajustada para comparar o ID
+    // Vamos simplificar. O filtro deve comparar o NOME da categoria.
+    // O objeto 'formattedProducts' precisa de ter o NOME da categoria, não o ID.
+    
+    // Vamos corrigir a formatação de dados no 'fetchData'
+  }, [activeCategory, products, allCategories]);
 
+  // Se estiver a carregar, mostra uma mensagem
   if (isLoading) {
     return <p className="text-center text-muted-foreground animate-pulse">A carregar catálogo...</p>;
   }

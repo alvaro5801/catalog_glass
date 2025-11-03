@@ -5,16 +5,25 @@ import PageLayout from "./page-layout";
 import Link from "next/link";
 import { Button } from "../components/ui/button";
 import { Search, PenSquare, MessageCircle, GlassWater, Wine, Coffee } from "lucide-react";
-import { motion } from "framer-motion"; // Motion can be used in Server Components for initial animations
+import { motion } from "framer-motion"; // Motion pode ser usado em Server Components
 
-// ✅ 1. Importar os nossos serviços e tipos do Prisma
+// 1. Importar os nossos serviços e tipos
 import { ProductRepository } from "@/domain/repositories/ProductRepository";
 import { ProductService } from "@/domain/services/ProductService";
 import { CategoryRepository } from "@/domain/repositories/CategoryRepository";
 import { CategoryService } from "@/domain/services/CategoryService";
-import type { Product as PrismaProduct } from '@prisma/client';
+// Tipos do Prisma que vêm do serviço
+import type { Product as PrismaProduct, Category as PrismaCategory, Specification, PriceTier } from '@prisma/client';
+// Tipo que o ProductCard espera
+import type { Product as CardProductType } from "@/lib/types";
 
-// ✅ 2. A página agora é um Server Component (async)
+// Tipo helper para o que o nosso ProductService realmente retorna
+type ProductWithRelations = PrismaProduct & {
+    specifications: Specification | null;
+    priceTable: PriceTier[];
+};
+
+// 2. A página agora é um Server Component (async)
 export default async function Home() {
   // Instanciar serviços para buscar dados
   const productRepository = new ProductRepository();
@@ -32,7 +41,7 @@ export default async function Home() {
   // Filtrar produtos em destaque no servidor
   const featuredProducts = allProducts.filter(product => product.isFeatured);
 
-  // O resto da sua lógica de ícones e cores permanece
+  // Lógica de ícones
   const categoryIcons: { [key: string]: React.ElementType } = {
     Copos: GlassWater,
     Taças: Wine,
@@ -46,15 +55,27 @@ export default async function Home() {
     Squeezes: 'group-hover:text-lime-500',
   };
 
-  // Mapear os produtos para o formato que o ProductCard espera
-  const formatProductForCard = (product: PrismaProduct) => ({
-    ...product,
-    id: product.id,
-    category: product.categoryId,
-    // O Prisma já retorna priceTable e specifications, que não são usados diretamente no Card, mas mantemos para consistência
-    priceTable: [],
-    specifications: { material: '', capacidade: '', dimensoes: '' }
-  });
+  // ✅ --- CORREÇÃO DO BUG ---
+  // Esta função converte o produto do formato Prisma (vindo do service)
+  // para o formato que o ProductCard espera (de lib/types.ts).
+  const formatProductForCard = (product: ProductWithRelations): CardProductType => {
+    // O ProductCard não usa ID, mas o tipo exige 'number'.
+    // Usamos '0' como um paliativo. O ideal seria refatorar 'lib/types.ts' para usar 'id: string'.
+    // O ProductCard só usa 'slug', 'images', e 'name'.
+    return {
+      id: 0, 
+      slug: product.slug,
+      name: product.name,
+      images: product.images,
+      // Campos extra para satisfazer o tipo 'CardProductType'
+      shortDescription: product.shortDescription || '',
+      description: product.description || '',
+      category: allCategories.find(c => c.id === product.categoryId)?.name || 'N/A',
+      specifications: product.specifications ?? { material: '', capacidade: '', dimensoes: '' },
+      priceTable: product.priceTable,
+      priceInfo: product.priceInfo || '',
+    };
+  };
 
   return (
     <PageLayout>
@@ -91,7 +112,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ✅ 3. A seção de destaques agora usa os dados da base de dados. */}
+      {/* 3. A seção de destaques agora usa os dados da base de dados (versão 'main') */}
       {featuredProducts.length > 0 && (
         <section className="py-20 bg-muted">
           <div className="container mx-auto px-4">
@@ -104,6 +125,7 @@ export default async function Home() {
                 <CarouselContent>
                   {featuredProducts.map((product) => (
                     <CarouselItem key={product.id} className="sm:basis-1/2 lg:basis-1/4">
+                      {/* Usamos a nossa função de formatação correta */}
                       <div className="p-1"><ProductCard product={formatProductForCard(product)} /></div>
                     </CarouselItem>
                   ))}
@@ -116,7 +138,7 @@ export default async function Home() {
         </section>
       )}
 
-      {/* ✅ 4. A seção de categorias agora usa os dados da base de dados. */}
+      {/* 4. A seção de categorias agora usa os dados da base de dados (versão 'main') */}
       <section className="bg-white py-20">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-2xl mx-auto"><h2 className="text-3xl md:text-4xl font-bold">Navegue por Categoria</h2><p className="mt-4 text-muted-foreground">Encontre exatamente o que precisa de forma rápida e fácil.</p></div>

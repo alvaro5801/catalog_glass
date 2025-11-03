@@ -2,24 +2,32 @@
 const nextJest = require('next/jest');
 
 const createJestConfig = nextJest({
-  // Fornece o caminho para a sua aplicação Next.js para carregar as configurações de .env
+  // Fornece o caminho para a sua aplicação Next.js
   dir: './',
 });
 
-// Adicione qualquer configuração personalizada do Jest que desejar aqui
+/** @type {import('jest').Config} */
 const customJestConfig = {
-  // ✅ CORREÇÃO: Alterado de volta para '.js' para corresponder ao nome do teu ficheiro.
+  // Define a raiz do projeto
+  rootDir: '.',
+
+  // Ficheiros de setup (se você tiver um 'jest.setup.js', mantenha)
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  
-  // O ambiente 'jsdom' simula um browser, essencial para testar componentes React.
+
+  // O ambiente de teste
   testEnvironment: 'jest-environment-jsdom',
-  
-  // Mapeia o atalho '@/' para a pasta 'src/', para que as importações funcionem nos testes.
+
+  // --- VERIFIQUE ESTA PARTE COM ATENÇÃO ---
   moduleNameMapper: {
+    // A regra para mapear '@/' para 'src/'
+    // Garanta que as aspas, barras e o '$1' estão corretos.
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+
+  // Ajuda o Jest a encontrar módulos (Esta linha veio da branch 'feature/test')
+  moduleDirectories: ['node_modules', '<rootDir>/'],
 };
 
 // createJestConfig é uma função assíncrona que exporta a configuração do Jest
-// para que o Next.js possa garantir que as transformações do SWC são carregadas.
+// para que o Next.js possa garantir que as transformações do SWC são carregadas. (Este comentário veio da branch 'main')
 module.exports = createJestConfig(customJestConfig);

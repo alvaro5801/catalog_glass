@@ -1,11 +1,11 @@
 // src/contexts/favorites-context.tsx
 "use client";
 
-import React, { createContext, useState, useEffect, useCallback, useContext } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useContext, ReactNode } from 'react';
 
 const FAVORITES_KEY = 'favoriteProducts';
 
-// ✅ ALTERAÇÃO: A interface agora trabalha com 'string'
+// A interface agora trabalha com 'string'
 interface FavoritesContextType {
   favorites: string[];
   toggleFavorite: (productId: string) => void;
@@ -13,8 +13,8 @@ interface FavoritesContextType {
 
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
 
-export function FavoritesProvider({ children }: { children: React.ReactNode }) {
-  // ✅ ALTERAÇÃO: O estado agora é um array de strings
+export function FavoritesProvider({ children }: { children: ReactNode }) {
+  // O estado agora é um array de strings
   const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // ✅ ALTERAÇÃO: O tipo do parâmetro é 'string[]'
+  // O tipo do parâmetro é 'string[]'
   const saveFavorites = (items: string[]) => {
     try {
       localStorage.setItem(FAVORITES_KEY, JSON.stringify(items));
@@ -37,7 +37,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // ✅ ALTERAÇÃO: O tipo do productId é 'string'
+  // O tipo do productId é 'string'
   const toggleFavorite = useCallback((productId: string) => {
     setFavorites(prevFavorites => {
       const isFavorite = prevFavorites.includes(productId);

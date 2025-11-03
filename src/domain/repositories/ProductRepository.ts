@@ -1,53 +1,50 @@
 // src/domain/repositories/ProductRepository.ts
 import { prisma } from '@/lib/prisma';
-import type { IProductRepository, CreateProductData } from '../interfaces/IProductRepository';
-import type { Product } from '@prisma/client';
+// ✅ Tipos corretos da 'feature/test'
+import type { IProductRepository, CreateProductData, ProductWithRelations } from '../interfaces/IProductRepository';
+import type { Prisma } from '@prisma/client';
 
 export class ProductRepository implements IProductRepository {
-  async findAllByCatalogId(catalogId: string): Promise<Product[]> {
+  
+  // ✅ Estrutura DRY (Don't Repeat Yourself) da 'feature/test'
+  private includeRelations = {
+    specifications: true,
+    priceTable: true,
+  };
+
+  async findAllByCatalogId(catalogId: string): Promise<ProductWithRelations[]> {
     return prisma.product.findMany({
       where: { catalogId },
-      include: {
-        specifications: true,
-        priceTable: true,
-      },
+      include: this.includeRelations,
     });
   }
 
-  async findById(id: string): Promise<Product | null> {
+  async findById(id: string): Promise<ProductWithRelations | null> {
     return prisma.product.findUnique({
       where: { id },
-      include: {
-        specifications: true,
-        priceTable: true,
-      },
+      include: this.includeRelations,
     });
   }
 
-  async create(data: CreateProductData): Promise<Product> {
+  async create(data: CreateProductData): Promise<ProductWithRelations> {
+    // ✅ Implementação da 'feature/test' que corresponde à Interface
     return prisma.product.create({
-      data: {
-        ...data,
-      },
-      include: {
-        specifications: true,
-        priceTable: true,
-      },
+      data,
+      include: this.includeRelations,
     });
   }
 
-  async update(id: string, data: Partial<Product>): Promise<Product> {
+  async update(id: string, data: Prisma.ProductUpdateInput): Promise<ProductWithRelations> {
+    // ✅ Implementação da 'feature/test' que corresponde à Interface
     return prisma.product.update({
       where: { id },
       data,
-      include: {
-        specifications: true,
-        priceTable: true,
-      },
+      include: this.includeRelations,
     });
   }
 
   async delete(id: string): Promise<void> {
+    // ✅ Lógica de 'delete' mais segura da 'main'
     // Para apagar um produto, precisamos apagar as suas relações primeiro
     await prisma.$transaction([
       prisma.specification.deleteMany({ where: { productId: id } }),

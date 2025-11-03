@@ -5,31 +5,43 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+// ✅ (Merge) Importações da 'main' (DialogDescription, Star, Loader2)
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle, Trash2, Edit, Star, Loader2 } from "lucide-react";
 import Image from "next/image";
-
-// ✅ 1. Importar os tipos do Prisma para corresponder aos dados da API
+// Importar os tipos do Prisma que a API realmente retorna
 import type { Product as PrismaProduct, Category as PrismaCategory, Specification, PriceTier } from "@prisma/client";
 
-// O tipo de produto que a nossa API retorna (com relações)
+// --- Tipos de Dados ---
+
+// ✅ (Merge) Usámos o tipo da 'main' (PrismaCategory) que é mais direto
+type Category = PrismaCategory;
+
+// ✅ (Merge) Usámos o tipo da 'feature/test' que inclui a relação 'category'
+// necessária para exibir o nome da categoria na tabela.
 type ProductWithRelations = PrismaProduct & {
     specifications: Specification | null;
     priceTable: PriceTier[];
+    category: Pick<PrismaCategory, 'id' | 'name'> | null; // A tabela precisa do nome
 };
 
-// Tipo para o formulário, agora mais completo
 type ProductFormData = {
     name: string;
-    categoryId: string; // Usaremos o ID da categoria
-    price: number;
+    categoryId: string;
+    price: number; // Este preço é o "inicial" para o Math.min
     image: string;
 };
 
 // --- Componente: Formulário do Produto (no Modal) ---
-function ProductForm({ product, categories, onSave, onCancel }: { product: ProductWithRelations | null, categories: PrismaCategory[], onSave: (data: ProductFormData) => void, onCancel: () => void }) {
+function ProductForm({ product, categories, onSave, onCancel }: { 
+    product: ProductWithRelations | null, 
+    categories: Category[], 
+    // ✅ (Merge) Usámos o onSave da 'main', que é mais simples e correto
+    onSave: (data: ProductFormData) => void, 
+    onCancel: () => void 
+}) {
     const [formData, setFormData] = useState<ProductFormData>({
         name: '',
         categoryId: '',
@@ -38,20 +50,26 @@ function ProductForm({ product, categories, onSave, onCancel }: { product: Produ
     });
 
     useEffect(() => {
+        // ✅ (Merge) Lógica de preço correta da 'feature/test' (Math.min)
+        const prices = product?.priceTable.map(p => p.price) || [];
+        const startingPrice = prices.length > 0 ? Math.min(...prices) : 0;
+        
         setFormData({
             name: product?.name || "",
             categoryId: product?.categoryId || categories[0]?.id || "",
-            price: product?.priceTable[0]?.price || 0,
+            price: startingPrice, // Usar o preço inicial calculado
             image: product?.images[0] || "/images/placeholder.png",
         });
     }, [product, categories]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        // ✅ (Merge) Chamada onSave da 'main'
         onSave(formData);
     };
 
     return (
+        // ✅ (Merge) JSX do Modal da 'main' (com DialogDescription)
         <DialogContent>
             <DialogHeader>
                 <DialogTitle>{product ? "Editar Produto" : "Adicionar Novo Produto"}</DialogTitle>
@@ -61,6 +79,7 @@ function ProductForm({ product, categories, onSave, onCancel }: { product: Produ
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div><Label htmlFor="name">Nome do Produto</Label><Input id="name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required /></div>
+                
                 <div>
                     <Label htmlFor="category">Categoria</Label>
                     <Select value={formData.categoryId} onValueChange={value => setFormData({ ...formData, categoryId: value })}>
@@ -68,7 +87,10 @@ function ProductForm({ product, categories, onSave, onCancel }: { product: Produ
                         <SelectContent>{categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
-                <div><Label htmlFor="price">Preço Inicial</Label><Input id="price" type="number" step="0.01" value={formData.price} onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })} required /></div>
+                
+                {/* ✅ (Merge) Usámos o Label da 'feature/test' (Preço (Inicial)) que corresponde à lógica Math.min */}
+                <div><Label htmlFor="price">Preço (Inicial)</Label><Input id="price" type="number" step="0.01" value={formData.price} onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })} required /></div>
+                
                 <div><Label>Imagem (funcionalidade de upload a ser implementada)</Label></div>
                 <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button><Button type="submit">Salvar</Button></div>
             </form>
@@ -79,12 +101,13 @@ function ProductForm({ product, categories, onSave, onCancel }: { product: Produ
 // --- Componente Principal da Página de Produtos ---
 export default function ProductsPage() {
     const [products, setProducts] = useState<ProductWithRelations[]>([]);
-    const [categories, setCategories] = useState<PrismaCategory[]>([]);
+    // ✅ (Merge) Usámos o tipo da 'main' para o estado
+    const [categories, setCategories] = useState<Category[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<ProductWithRelations | null>(null);
 
-    // ✅ 2. Refatorado para buscar dados das nossas APIs
+    // Efeito para buscar dados (igual em ambas, está correto)
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
@@ -93,8 +116,14 @@ export default function ProductsPage() {
                     fetch('/api/products'),
                     fetch('/api/categories'),
                 ]);
+
+                if (!productsRes.ok || !categoriesRes.ok) {
+                    throw new Error('Falha ao carregar dados da API');
+                }
+
                 const productsData = await productsRes.json();
                 const categoriesData = await categoriesRes.json();
+                
                 setProducts(productsData);
                 setCategories(categoriesData);
             } catch (error) {
@@ -106,7 +135,7 @@ export default function ProductsPage() {
         fetchData();
     }, []);
 
-    // ✅ 3. Refatorado para usar 'string' como ID e chamada de API otimista
+    // ✅ (Merge) Adicionámos a função 'handleToggleFeatured' da 'main'
     const handleToggleFeatured = async (productId: string, currentStatus: boolean) => {
         // Atualização Otimista: Mudar o estado na UI imediatamente
         setProducts(prevProducts =>
@@ -135,7 +164,6 @@ export default function ProductsPage() {
     const handleEditClick = (product: ProductWithRelations) => { setEditingProduct(product); setIsDialogOpen(true); };
     const handleAddNewClick = () => { setEditingProduct(null); setIsDialogOpen(true); };
 
-    // ✅ 4. Refatorado para usar 'string' como ID
     const handleDeleteProduct = async (productId: string) => {
         if (!confirm("Tem a certeza que quer apagar este produto?")) return;
         try {
@@ -146,7 +174,7 @@ export default function ProductsPage() {
         }
     };
 
-    // ✅ 5. Refatorado para construir o payload correto para a API
+    // ✅ (Merge) Usámos o 'handleSaveProduct' completo da 'main'
     const handleSaveProduct = async (formData: ProductFormData) => {
         try {
             const isEditing = !!editingProduct;
@@ -165,7 +193,11 @@ export default function ProductsPage() {
                     create: editingProduct?.specifications || { material: 'N/A', capacidade: 'N/A', dimensoes: 'N/A' }
                 },
                 priceTable: {
-                    create: editingProduct?.priceTable.length ? editingProduct.priceTable : [{ quantity: '1 unidade', price: formData.price }]
+                    // ✅ (Merge) Corrigimos a lógica de 'create' da 'main'
+                    // Se estiver a editar, não cria, se for novo, usa o preço do formulário
+                    ...(isEditing ? {} : {
+                        create: [{ quantity: '1 unidade', price: formData.price }]
+                    })
                 },
             };
 
@@ -179,7 +211,8 @@ export default function ProductsPage() {
             });
 
             if (!response.ok) throw new Error('Falha ao salvar produto');
-            const savedProduct = await response.json();
+            
+            const savedProduct: ProductWithRelations = await response.json(); 
 
             if (isEditing) {
                 setProducts(prev => prev.map(p => p.id === savedProduct.id ? savedProduct : p));
@@ -192,6 +225,7 @@ export default function ProductsPage() {
         }
     };
 
+    // ✅ (Merge) Usámos o ecrã de loading da 'main'
     if (isLoading) return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /><p className="ml-2">A carregar dados do catálogo...</p></div>;
 
     return (
@@ -204,32 +238,48 @@ export default function ProductsPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
+                            {/* ✅ (Merge) Cabeçalho da 'main' (com Destaque) */}
                             <TableHead className="w-[80px]">Destaque</TableHead>
                             <TableHead>Imagem</TableHead>
                             <TableHead>Nome</TableHead>
                             <TableHead>Categoria</TableHead>
-                            <TableHead>Preço Inicial</TableHead>
+                            {/* ✅ (Merge) Texto do cabeçalho da 'feature/test' */}
+                            <TableHead>Preço (a partir de)</TableHead>
                             <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {products.map(product => (
-                            <TableRow key={product.id}>
-                                <TableCell>
-                                    <Button variant="ghost" size="icon" onClick={() => handleToggleFeatured(product.id, !!product.isFeatured)} aria-label={product.isFeatured ? `Remover ${product.name} dos destaques` : `Adicionar ${product.name} aos destaques`}>
-                                        <Star className={`h-5 w-5 transition-colors ${product.isFeatured ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 hover:text-gray-400'}`} />
-                                    </Button>
-                                </TableCell>
-                                <TableCell><Image src={product.images?.[0] || '/images/placeholder.png'} alt={product.name} width={40} height={40} className="rounded-md object-cover" /></TableCell>
-                                <TableCell className="font-medium">{product.name}</TableCell>
-                                <TableCell>{categories.find(c => c.id === product.categoryId)?.name || 'N/A'}</TableCell>
-                                <TableCell>R$ {product.priceTable?.[0]?.price.toFixed(2).replace('.', ',') || '0,00'}</TableCell>
-                                <TableCell className="text-right">
-                                    <Button variant="outline" size="sm" onClick={() => handleEditClick(product)} className="mr-2" aria-label={`Editar ${product.name}`}><Edit className="h-4 w-4" /></Button>
-                                    <Button variant="destructive" size="sm" onClick={() => handleDeleteProduct(product.id)} aria-label={`Apagar ${product.name}`}><Trash2 className="h-4 w-4" /></Button>
-                                </TableCell>
-                            </TableRow>
-                        ))}
+                        {
+                        products.map(product => {
+                            // ✅ (Merge) Lógica de preço correta da 'feature/test'
+                            const prices = product.priceTable.map(p => p.price);
+                            const startingPrice = prices.length > 0 ? Math.min(...prices) : 0;
+                            
+                            // A lógica de encontrar o nome da categoria está correta
+                            const categoryName = product.category?.name || categories.find(c => c.id === product.categoryId)?.name || 'N/A';
+                            
+                            return (
+                                <TableRow key={product.id}>
+                                    {/* ✅ (Merge) Célula "Destaque" da 'main' */}
+                                    <TableCell>
+                                        <Button variant="ghost" size="icon" onClick={() => handleToggleFeatured(product.id, !!product.isFeatured)} aria-label={product.isFeatured ? `Remover ${product.name} dos destaques` : `Adicionar ${product.name} aos destaques`}>
+                                            <Star className={`h-5 w-5 transition-colors ${product.isFeatured ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 hover:text-gray-400'}`} />
+                                        </Button>
+                                    </TableCell>
+                                    <TableCell><Image src={product.images[0] || '/images/placeholder.png'} alt={product.name} width={40} height={40} className="rounded-md object-cover" /></TableCell>
+                                    <TableCell className="font-medium">{product.name}</TableCell>
+                                    <TableCell>{categoryName}</TableCell>
+                                    
+                                    {/* ✅ (Merge) Célula de Preço usando a lógica correta da 'feature/test' */}
+                                    <TableCell>R$ {startingPrice.toFixed(2)}</TableCell>
+
+                                    <TableCell className="text-right">
+                                        <Button variant="outline" size="sm" onClick={() => handleEditClick(product)} className="mr-2" aria-label={`Editar ${product.name}`}><Edit className="h-4 w-4" /></Button>
+                                        <Button variant="destructive" size="sm" onClick={() => handleDeleteProduct(product.id)} aria-label={`Apagar ${product.name}`}><Trash2 className="h-4 w-4" /></Button>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
                     </TableBody>
                 </Table>
             </div>
