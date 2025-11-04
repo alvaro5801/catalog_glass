@@ -3,8 +3,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { ProductCard } from "../../components/product-card";
-import { Button } from "../../components/ui/button";
+import { ProductCard } from "@/components/product-card";
+import { Button } from "@/components/ui/button";
 import type { Product } from "@/lib/types"; // Nosso tipo de frontend
 import type { Product as PrismaProduct, Category as PrismaCategory, Specification, PriceTier } from "@prisma/client"; // Tipos do Prisma
 
@@ -16,6 +16,7 @@ type ProductFromApi = PrismaProduct & {
 export function CatalogContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [allCategories, setAllCategories] = useState<string[]>(["Todos"]);
+  const [categoriesData, setCategoriesData] = useState<PrismaCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [activeCategory, setActiveCategory] = useState("Todos");
@@ -35,16 +36,11 @@ export function CatalogContent() {
         }
 
         const productsData: ProductFromApi[] = await productsRes.json();
-        const categoriesData: PrismaCategory[] = await categoriesRes.json();
+        const categoriesData: PrismaCategory[] = await categoriesRes.json(); 
 
-        // ✅ CORREÇÃO AQUI:
-        // Verificamos se 'p.specifications' existe. Se não existir (for null),
-        // criamos um objeto de especificações com valores padrão.
-        // Isto garante que o objeto final corresponde sempre ao tipo 'Product'.
         const formattedProducts = productsData.map((p: ProductFromApi) => ({
           ...p,
-          // Nota: O tipo 'Product' espera 'category' como string (id), o que está correto.
-          category: p.categoryId, 
+          category: p.categoryId, // O 'category' no tipo Product (lib/types.ts) é o 'categoryId'
           specifications: p.specifications ?? { material: '', capacidade: '', dimensoes: '' },
         }));
 
@@ -52,6 +48,7 @@ export function CatalogContent() {
 
         setProducts(formattedProducts);
         setAllCategories(["Todos", ...categoryNames]);
+        setCategoriesData(categoriesData);
 
       } catch (error) {
         console.error("Falha ao buscar dados:", error);
@@ -76,22 +73,12 @@ export function CatalogContent() {
     if (activeCategory === "Todos") {
       return products;
     }
-    // Usamos 'product.category' que agora é o 'categoryId' (string)
-    return products.filter((product) => {
-        // Encontramos o nome da categoria do produto para comparar
-        const categoryName = allCategories.find(name => 
-            categoriesData.find(c => c.name === name)?.id === product.category
-        );
-        return categoryName === activeCategory;
-    });
-    // ✅ CORREÇÃO: A lógica do filtro precisa de ser ajustada para comparar o ID
-    // Vamos simplificar. O filtro deve comparar o NOME da categoria.
-    // O objeto 'formattedProducts' precisa de ter o NOME da categoria, não o ID.
     
-    // Vamos corrigir a formatação de dados no 'fetchData'
-  }, [activeCategory, products, allCategories]);
+    const activeCategoryId = categoriesData.find(c => c.name === activeCategory)?.id;
+    return products.filter((product) => product.category === activeCategoryId);
 
-  // Se estiver a carregar, mostra uma mensagem
+  }, [activeCategory, products, categoriesData]);
+
   if (isLoading) {
     return <p className="text-center text-muted-foreground animate-pulse">A carregar catálogo...</p>;
   }

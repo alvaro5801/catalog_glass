@@ -2,6 +2,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import Home from '../page'; // A nossa página (agora um Server Component)
+import { FavoritesProvider } from '@/contexts/favorites-context'; // ✅ 1. Importar o Provider
 
 // --- Tipos de Dados Similares aos do Prisma (para os nossos mocks) ---
 const mockCategories = [
@@ -40,7 +41,7 @@ const mockProducts = [
   },
 ];
 
-// --- 1. SIMULAR (MOCK) OS SERVIÇOS ---
+// --- SIMULAR (MOCK) OS SERVIÇOS ---
 const mockGetProducts = jest.fn();
 const mockGetAllCategories = jest.fn();
 
@@ -60,7 +61,7 @@ jest.mock('@/domain/repositories/ProductRepository');
 jest.mock('@/domain/repositories/CategoryRepository');
 
 
-// --- 2. MOCKS DE UI E HOOKS (Mantêm-se) ---
+// --- MOCKS DE UI E HOOKS (Mantêm-se) ---
 jest.mock('@/components/ui/carousel', () => ({
   Carousel: ({ children }: { children: React.ReactNode }) => <div data-testid="mock-carousel">{children}</div>,
   CarouselContent: ({ children }: { children: React.ReactNode }) => <div data-testid="mock-carousel-content">{children}</div>,
@@ -93,16 +94,14 @@ jest.mock('next/link', () => {
 });
 jest.mock('next/image', () => ({
   __esModule: true,
-  // ✅ CORREÇÃO: Trocado 'any' por 'React.ComponentProps<'img'>'
   default: (props: React.ComponentProps<'img'>) => {
     // eslint-disable-next-line @next/next/no-img-element
     return <img {...props} alt={props.alt || ""} />;
   },
 }));
-// (O mock do 'favorites-context' foi removido pois 'page.tsx' já não o usa)
 
 
-// --- 3. OS TESTES ATUALIZADOS ---
+// --- OS TESTES ATUALIZADOS ---
 describe('Home Page (Server Component)', () => {
   
   beforeEach(() => {
@@ -121,7 +120,9 @@ describe('Home Page (Server Component)', () => {
 
     // 2. Execução: Chamar o Server Component (que agora é async)
     const resolvedComponent = await Home();
-    render(resolvedComponent);
+    
+    // ✅ 2. CORREÇÃO: Embrulhar o componente no Provider
+    render(<FavoritesProvider>{resolvedComponent}</FavoritesProvider>);
 
     // 3. Verificação:
     // Títulos principais
@@ -129,8 +130,7 @@ describe('Home Page (Server Component)', () => {
     expect(screen.getByRole('link', { name: /Explorar Catálogo/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Personalize em Apenas 3 Passos/i })).toBeInTheDocument();
 
-    // Verificar produtos em destaque (usando o H2 correto da 'main')
-    // Apenas o produto com 'isFeatured: true' deve aparecer
+    // Verificar produtos em destaque
     expect(screen.getByRole('heading', { name: /Produtos em Destaque/i })).toBeInTheDocument();
     expect(screen.getByText('Copo de Teste em Destaque')).toBeInTheDocument();
     expect(screen.queryByText('Taça de Teste Normal')).not.toBeInTheDocument();
@@ -149,7 +149,9 @@ describe('Home Page (Server Component)', () => {
 
     // 2. Execução:
     const resolvedComponent = await Home();
-    render(resolvedComponent);
+    
+    // ✅ 3. CORREÇÃO: Embrulhar o componente no Provider
+    render(<FavoritesProvider>{resolvedComponent}</FavoritesProvider>);
 
     // 3. Verificação:
     // O título da secção de destaques não deve existir

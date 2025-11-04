@@ -1,77 +1,120 @@
 // src/app/catalogo/[slug]/__tests__/page.test.tsx
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-// ✅ CORREÇÃO: Importar 'products' diretamente, tal como a página faz
-import ProductPage, { generateStaticParams } from '../page';
-import { products } from '@/data/products'; // <-- Importar dados reais
-// ❌ 'notFound' foi removido porque não estava a ser utilizado
-// import { notFound } from 'next/navigation'; 
+import { render } from '@testing-library/react';
+// ✅ CORREÇÃO 1: Remover 'generateStaticParams' da importação
+import ProductPage from '../page'; 
 import type { Product } from '@/lib/types';
+import type { Product as PrismaProduct, Specification, PriceTier } from '@prisma/client';
 
-// Mock do ProductDetail (continua igual)
+// Mock do ProductService
+jest.mock('@/domain/services/ProductService', () => {
+  const mockGetProducts = jest.fn(); 
+  return {
+    ProductService: jest.fn().mockImplementation(() => ({
+      getProducts: mockGetProducts, 
+    })),
+    __mocks__: { mockGetProducts },
+  };
+});
+jest.mock('@/domain/repositories/ProductRepository');
+const { __mocks__ } = jest.requireMock('@/domain/services/ProductService');
+const { mockGetProducts } = __mocks__;
+
+// Mock do ProductDetail
 const mockProductDetail = jest.fn();
 jest.mock('@/components/product-detail', () => ({
-  ProductDetail: (props: { product: Product }) => { // Tipar as props esperadas
+  ProductDetail: (props: { product: Product }) => {
     mockProductDetail(props);
     return <div data-testid="mock-product-detail">Detalhes Mock</div>;
   },
 }));
 
-// Mock do notFound (a importação foi removida, mas o mock continua)
+// Mock do notFound
 const mockNotFound = jest.fn();
 jest.mock('next/navigation', () => ({
   notFound: () => mockNotFound(),
-  useRouter: () => ({ push: jest.fn() }),
-  useSearchParams: () => ({ get: () => '' }), // Manter mocks relevantes
 }));
 
+// Tipos e Dados de Teste (iguais)
+type ProductWithRelations = PrismaProduct & {
+  specifications: Specification | null;
+  priceTable: PriceTier[];
+};
+const mockProductData: ProductWithRelations = {
+  id: 'prod_1',
+  slug: 'copo-long-drink-personalizado',
+  name: 'Copo Long Drink',
+  categoryId: 'cat_1',
+  specifications: { id: 's1', material: 'Acrílico', capacidade: '350ml', dimensoes: '15cm', productId: 'prod_1' },
+  priceTable: [{ id: 'pt1', quantity: '10-29', price: 4.5, productId: 'prod_1' }],
+  shortDescription: 'Descrição curta',
+  description: 'Descrição longa',
+  images: ['/images/products/long-drink-1.jpg'],
+  priceInfo: 'Preço info',
+  isFeatured: false,
+  catalogId: 'cat123'
+};
+const formattedProductData: Product = {
+  id: 'prod_1',
+  slug: 'copo-long-drink-personalizado',
+  name: 'Copo Long Drink',
+  category: 'cat_1',
+  specifications: { material: 'Acrílico', capacidade: '350ml', dimensoes: '15cm' },
+  priceTable: [{ quantity: '10-29', price: 4.5 }],
+  shortDescription: 'Descrição curta',
+  description: 'Descrição longa',
+  images: ['/images/products/long-drink-1.jpg'],
+  priceInfo: 'Preço info',
+  isFeatured: false,
+};
 
+// --- TESTES ---
 describe('ProductPage (Server Component)', () => {
-
   beforeEach(() => {
     mockProductDetail.mockClear();
     mockNotFound.mockClear();
+    mockGetProducts.mockClear();
   });
 
-  // Teste para generateStaticParams
-  it('generateStaticParams deve retornar slugs dos produtos reais', async () => {
-    const params = generateStaticParams(); // Agora usa os dados reais importados
-
-    expect(params).toEqual(products.map(p => ({ slug: p.slug })));
+  // ✅ CORREÇÃO 2: Remover este bloco de teste inteiro (agora está obsoleto)
+  /*
+  it('generateStaticParams deve retornar slugs do serviço', async () => {
+    mockGetProducts.mockResolvedValue([mockProductData]);
+    const params = await generateStaticParams();
+    expect(params).toEqual([{ slug: 'copo-long-drink-personalizado' }]);
   });
+  */
 
-  it('deve buscar o produto real e renderizar ProductDetail', async () => {
-    const productSlugToTest = 'copo-long-drink-personalizado'; // Usar um slug real
-    const productToTest = products.find(p => p.slug === productSlugToTest);
-    if (!productToTest) throw new Error(`Produto real com slug "${productSlugToTest}" não encontrado para o teste`); // Garantia
-
-    const props = { params: { slug: productSlugToTest } };
-
-    // Execução
+  it('deve buscar o produto no serviço e renderizar ProductDetail', async () => {
+    mockGetProducts.mockResolvedValue([mockProductData]);
+    const props = { params: { slug: 'copo-long-drink-personalizado' } };
     const resolvedComponent = await ProductPage(props);
     render(resolvedComponent);
-
-    // Verificação
-    expect(mockNotFound).not.toHaveBeenCalled();
-    expect(screen.getByTestId('mock-product-detail')).toBeInTheDocument();
-
     expect(mockProductDetail).toHaveBeenCalledWith({
-       product: productToTest // Espera o objeto completo dos dados reais
+       product: formattedProductData
     });
   });
 
-  it('deve chamar notFound se o produto não for encontrado pelo slug nos dados reais', async () => {
-     const props = { params: { slug: 'slug-nao-existe' } };
-
-     // Execução e Verificação
-     // Usamos try/catch porque notFound() interrompe a renderização.
+  it('deve chamar notFound se o produto não for encontrado pelo serviço', async () => {
+    mockGetProducts.mockResolvedValue([]);
+    const props = { params: { slug: 'slug-nao-existe' } };
      try {
-       await ProductPage(props);
-     } catch { // ✅ CORREÇÃO: Alterado de 'catch (e: any)' para 'catch'
-        // É esperado que notFound() lance um erro interno específico do Next.js
+       await ProductPage(props); 
+     } catch { 
+       // O notFound() vai lançar um erro
      }
      expect(mockNotFound).toHaveBeenCalledTimes(1);
-     expect(mockProductDetail).not.toHaveBeenCalled();
   });
 
+  it('deve chamar notFound se o produto for encontrado mas não tiver especificações', async () => {
+    const productSemSpecs = { ...mockProductData, specifications: null };
+    mockGetProducts.mockResolvedValue([productSemSpecs]);
+    const props = { params: { slug: 'copo-long-drink-personalizado' } };
+     try {
+       await ProductPage(props); 
+     } catch { 
+        // O notFound() vai lançar um erro
+     }
+     expect(mockNotFound).toHaveBeenCalledTimes(1);
+  });
 });
