@@ -3,17 +3,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { ProductRepository } from "@/domain/repositories/ProductRepository";
 import { ProductService } from "@/domain/services/ProductService";
 
-// Instanciar as dependências, tal como fizemos nas outras rotas
 const productRepository = new ProductRepository();
 const productService = new ProductService(productRepository);
+
+export const dynamic = 'force-dynamic';
 
 // --- FUNÇÃO GET (Obter um produto por ID) ---
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  // ✅ CORREÇÃO: Mudar a assinatura para o que o build espera
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const product = await productService.getProductById(params.id);
+    // ✅ CORREÇÃO: Usar 'await' para extrair os params
+    const { id } = await context.params;
+    
+    const product = await productService.getProductById(id);
     if (!product) {
       return NextResponse.json({ error: "Produto não encontrado." }, { status: 404 });
     }
@@ -27,16 +32,18 @@ export async function GET(
 // --- FUNÇÃO PUT (Atualizar um produto) ---
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  // ✅ CORREÇÃO: Mudar a assinatura para o que o build espera
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // ✅ CORREÇÃO: Usar 'await' para extrair os params
+    const { id } = await context.params;
+    
     const body = await request.json();
-    // A nossa camada de serviço já trata da lógica de encontrar e atualizar
-    const updatedProduct = await productService.updateProduct(params.id, body);
+    const updatedProduct = await productService.updateProduct(id, body);
     return NextResponse.json(updatedProduct);
   } catch (error) {
     const err = error as Error;
-    // Retornar um erro mais específico se o produto não for encontrado
     const status = err.message.includes("not found") ? 404 : 400;
     return NextResponse.json({ error: err.message }, { status });
   }
@@ -45,10 +52,14 @@ export async function PUT(
 // --- FUNÇÃO DELETE (Apagar um produto) ---
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  // ✅ CORREÇÃO: Mudar a assinatura para o que o build espera
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    await productService.deleteProduct(params.id);
+    // ✅ CORREÇÃO: Usar 'await' para extrair os params
+    const { id } = await context.params;
+    
+    await productService.deleteProduct(id);
     return new NextResponse(null, { status: 204 }); // Sucesso, sem conteúdo
   } catch (error) {
     const err = error as Error;

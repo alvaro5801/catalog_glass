@@ -13,9 +13,7 @@ jest.mock('../../page-layout', () => {
   };
 });
 
-// Simular o next/navigation (useRouter, usePathname, etc.)
-// Embora esta página não os use diretamente, outros componentes podem usá-los.
-// Manter a simulação consistente com outros testes.
+// Simular o next/navigation
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn() }),
   usePathname: () => '/saas', // Simula o pathname para esta página
@@ -26,9 +24,12 @@ jest.mock('next/navigation', () => ({
 // Simular o next/image para evitar erros de configuração de imagem nos testes
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: (props: any) => {
+  // ✅ CORREÇÃO 1: Trocado o tipo por um mais seguro que 'any'
+  default: (props: React.ComponentProps<'img'>) => { 
+    // ✅ CORREÇÃO 2 e 3: O comentário 'disable' foi movido para a linha
+    // imediatamente acima do 'img' para funcionar corretamente.
     // eslint-disable-next-line @next/next/no-img-element
-    return <img {...props} />;
+    return <img {...props} alt={props.alt || ""} />; 
   },
 }));
 
@@ -60,7 +61,6 @@ describe('SaasLandingPage Component', () => {
   it('deve renderizar os botões principais de Call to Action (CTA)', () => {
     render(<SaasLandingPage />);
 
-    // ✅ CORREÇÃO 1: Regex mais flexível
     const ctaButtons = screen.getAllByRole('link', { name: /Criar .* Catálogo Grátis/i });
     expect(ctaButtons.length).toBeGreaterThanOrEqual(2); // Deve encontrar 2
 
@@ -80,7 +80,6 @@ describe('SaasLandingPage Component', () => {
   it('deve renderizar elementos específicos das secções', () => {
     render(<SaasLandingPage />);
 
-    // ✅ CORREÇÃO 2: Procurar pelo heading (h4) específico
     expect(screen.getByRole('heading', { level: 4, name: /PDFs desatualizados/i })).toBeInTheDocument();
 
     // Verificar uma funcionalidade em destaque
