@@ -1,4 +1,5 @@
 // src/app/page-layout.tsx (NOVO FICHEIRO)
+"use client";
 import { Header } from "../components/header";
 import { Footer } from "../components/footer";
 import { WhatsAppButton } from "../components/whatsapp-button";
