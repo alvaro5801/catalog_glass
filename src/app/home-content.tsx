@@ -3,7 +3,6 @@
 
 // Todas as importações de cliente vêm para aqui
 import Link from "next/link";
-import Image from "next/image";
 import React from 'react';
 import { motion } from "framer-motion";
 import { ProductCard } from "../components/product-card";
