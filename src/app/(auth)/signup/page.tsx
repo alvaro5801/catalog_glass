@@ -2,27 +2,72 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation"; 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react"; 
 
 export default function SignUpPage() {
+  const router = useRouter(); 
+
+  // Estados para todos os campos do formulário
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  
+  // Estados para feedback da UI
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
+    // Validação do frontend
     if (password !== confirmPassword) {
       setError("As senhas não correspondem. Por favor, tente novamente.");
       return;
     }
 
-    console.log("Formulário válido!");
+    setIsLoading(true); // Inicia o loading
+
+    try {
+      // Chamar a nossa nova API de backend
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: name,
+          email: email,
+          password: password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Se a API retornar um erro (ex: 409 "E-mail já existe"), mostrá-lo
+        throw new Error(data.error || 'Ocorreu um erro.');
+      }
+
+      // SUCESSO! Redirecionar para a página de verificação
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+
+    } catch (error: unknown) { // ✅ Correção de Lint
+      // Verificamos se 'error' é uma instância de 'Error'
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("Ocorreu um erro desconhecido.");
+      }
+    } finally {
+      setIsLoading(false); // Termina o loading
+    }
   };
 
   return (
@@ -43,11 +88,32 @@ export default function SignUpPage() {
           <div className="space-y-4">
             <div>
               <Label htmlFor="name">Nome</Label>
-              <Input id="name" name="name" type="text" required className="mt-1" placeholder="Seu nome completo" />
+              <Input 
+                id="name" 
+                name="name" 
+                type="text" 
+                required 
+                className="mt-1" 
+                placeholder="Seu nome completo" 
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={isLoading}
+              />
             </div>
             <div>
               <Label htmlFor="email-address">E-mail</Label>
-              <Input id="email-address" name="email" type="email" autoComplete="email" required className="mt-1" placeholder="seu@email.com" />
+              <Input 
+                id="email-address" 
+                name="email" 
+                type="email" 
+                autoComplete="email" 
+                required 
+                className="mt-1" 
+                placeholder="seu@email.com" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
+              />
             </div>
             <div>
               <Label htmlFor="password">Senha</Label>
@@ -60,6 +126,7 @@ export default function SignUpPage() {
                 placeholder="Crie uma senha forte"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
               />
             </div>
             <div>
@@ -73,11 +140,11 @@ export default function SignUpPage() {
                 placeholder="Confirme a sua senha"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={isLoading}
               />
             </div>
           </div>
 
-          {/* ✅ CORREÇÃO AQUI: Adicionar o role="alert" */}
           {error && (
             <div role="alert" className="flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
               <AlertCircle className="h-4 w-4" />
@@ -86,8 +153,9 @@ export default function SignUpPage() {
           )}
 
           <div>
-            <Button type="submit" className="w-full">
-              Criar Conta
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isLoading ? "A criar conta..." : "Criar Conta"}
             </Button>
           </div>
         </form>

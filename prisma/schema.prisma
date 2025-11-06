@@ -1,5 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// prisma/schema.prisma
 
 generator client {
   provider = "prisma-client-js"
@@ -10,61 +9,63 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// MODELO DE UTILIZADOR E ASSINATURA
+// --- MODELO DE UTILIZADOR ATUALIZADO ---
 model User {
-  id               String    @id @default(cuid())
-  name             String?
-  email            String    @unique
-  stripeCustomerId String?   @unique
-  subscription     Subscription?
-  catalogs         Catalog[]
+  id             String    @id @default(cuid())
+  name           String?
+  email          String    @unique
+  hashedPassword String?   // ✅ Campo de senha segura
+  emailVerified  DateTime? // ✅ Campo de status de verificação
+
+  catalogs            Catalog[]
+  verificationTokens  VerificationToken[] // ✅ Relação com os tokens
 }
 
-model Subscription {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id])
-  plan      String
-  status    String
+// --- MODELO DE VERIFICAÇÃO NOVO ---
+model VerificationToken {
+  id      String   @id @default(cuid())
+  email   String   // Guardamos o e-mail para quem foi enviado
+  token   String   @unique // O código (ex: "123456")
+  expires DateTime // A data de expiração do código
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([email, token])
 }
 
-// MODELO DO CATÁLOGO E SEUS AGREGADOS
+// --- MODELO DO CATÁLOGO (Sem alterações) ---
 model Catalog {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   userId      String
-  user        User      @relation(fields: [userId], references: [id])
+  user        User       @relation(fields: [userId], references: [id])
   products    Product[]
   categories  Category[]
 }
 
 model Category {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
   catalogId String
-  catalog   Catalog  @relation(fields: [catalogId], references: [id])
+  catalog   Catalog   @relation(fields: [catalogId], references: [id])
   products  Product[]
 
-  // ✅ CORREÇÃO 2: Garante que o nome da categoria é único DENTRO de um catálogo.
   @@unique([name, catalogId])
 }
 
 model Product {
-  id               String       @id @default(cuid())
-  slug             String       @unique
+  id               String        @id @default(cuid())
+  slug             String        @unique
   name             String
   shortDescription String
   description      String
   images           String[]
   priceInfo        String
-  isFeatured       Boolean      @default(false)
-
-  // ✅ CORREÇÃO 1: A relação agora é feita pelo ID da categoria, que é único.
+  isFeatured       Boolean       @default(false)
   categoryId       String
-  category         Category     @relation(fields: [categoryId], references: [id])
-  
+  category         Category      @relation(fields: [categoryId], references: [id])
   catalogId        String
-  catalog          Catalog      @relation(fields: [catalogId], references: [id])
-  
+  catalog          Catalog       @relation(fields: [catalogId], references: [id])
   specifications   Specification?
   priceTable       PriceTier[]
 }
