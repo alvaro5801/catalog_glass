@@ -27,18 +27,13 @@ function VerifyEmailForm() {
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
-    setIsLoading(true);
-
-    if (!email || !token) {
-      setError("E-mail ou código em falta.");
-      setIsLoading(false);
-      return;
-    }
-
+  // --- ✅ NOVA LÓGICA DE TENTATIVA AUTOMÁTICA ---
+  
+  /**
+   * Esta função tenta verificar o token.
+   * Se falhar devido a um timeout (erro de JSON), ela tenta novamente.
+   */
+  const attemptVerification = async (attempt: number) => {
     try {
       const response = await fetch('/api/auth/verify-email', {
         method: 'POST',
@@ -51,27 +46,64 @@ function VerifyEmailForm() {
         }),
       });
 
+      // A linha que falha com o timeout está aqui
       const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data.error || 'Falha ao verificar o código.');
       }
 
+      // Sucesso!
       setSuccess("E-mail verificado com sucesso! A redirecionar...");
+      setIsLoading(false); // Parar o loading
       
       setTimeout(() => {
-        router.push('/saas'); 
+        router.push('/saas'); // Redirecionar
       }, 2000);
 
     } catch (error: unknown) { 
+      
+      // Verificamos se é o nosso erro de timeout E se é a primeira tentativa
+      if (error instanceof Error && 
+          error.message.includes("Unexpected end of JSON input") && 
+          attempt === 1) {
+        
+        // É um timeout! Vamos esperar 2s e tentar de novo.
+        // Não mostramos erro, mantemos o isLoading = true.
+        setTimeout(() => {
+          attemptVerification(2); // Inicia a segunda tentativa
+        }, 2000); // Espera 2 segundos
+        
+        return; // Sai da função sem mostrar erro
+      }
+
+      // Se chegarmos aqui, é um erro real (ex: "Código inválido")
+      // ou foi a segunda falha de timeout.
       if (error instanceof Error) {
         setError(error.message);
       } else {
         setError("Ocorreu um erro desconhecido.");
       }
-    } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Parar o loading
     }
+  };
+
+  // --- FIM DA NOVA LÓGICA ---
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    setIsLoading(true);
+
+    if (!email || !token) {
+      setError("E-mail ou código em falta.");
+      setIsLoading(false);
+      return;
+    }
+
+    // ✅ MODIFICAÇÃO: Chamamos a nossa nova função de tentativa
+    attemptVerification(1); // Inicia a primeira tentativa
   };
 
   if (!email) {
