@@ -9,24 +9,32 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// --- MODELO DE UTILIZADOR ATUALIZADO ---
+// --- MODELO DE UTILIZADOR ATUALIZADO (para Auth.js) ---
 model User {
   id             String    @id @default(cuid())
   name           String?
   email          String    @unique
-  hashedPassword String?   // ✅ Campo de senha segura
-  emailVerified  DateTime? // ✅ Campo de status de verificação
+  hashedPassword String? // O nosso campo de senha
+  emailVerified  DateTime? // Já tínhamos este
+  image          String? // Auth.js recomenda este (para fotos de perfil)
 
-  catalogs            Catalog[]
-  verificationTokens  VerificationToken[] // ✅ Relação com os tokens
+  // Relações do Auth.js
+  accounts Account[]
+  sessions Session[]
+
+  // Nossas relações
+  catalogs                Catalog[]
+  // ✅ RENOMEADO: A tua relação de tokens foi atualizada
+  emailVerificationTokens EmailVerificationToken[]
 }
 
-// --- MODELO DE VERIFICAÇÃO NOVO ---
-model VerificationToken {
+// --- ✅ RENOMEADO: O TEU MODELO DE TOKEN ANTIGO ---
+// (Era "VerificationToken", agora é "EmailVerificationToken")
+model EmailVerificationToken {
   id      String   @id @default(cuid())
-  email   String   // Guardamos o e-mail para quem foi enviado
-  token   String   @unique // O código (ex: "123456")
-  expires DateTime // A data de expiração do código
+  email   String
+  token   String   @unique
+  expires DateTime
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -34,13 +42,52 @@ model VerificationToken {
   @@unique([email, token])
 }
 
-// --- MODELO DO CATÁLOGO (Sem alterações) ---
+// --- NOVOS MODELOS (Requeridos pelo Auth.js Prisma Adapter) ---
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Este é o modelo que o Auth.js usa para logins "sem senha" (magic links)
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// --- OS TEUS MODELOS (Sem alterações) ---
+
 model Catalog {
-  id          String     @id @default(cuid())
-  userId      String
-  user        User       @relation(fields: [userId], references: [id])
-  products    Product[]
-  categories  Category[]
+  id         String     @id @default(cuid())
+  userId     String
+  user       User       @relation(fields: [userId], references: [id])
+  products   Product[]
+  categories Category[]
 }
 
 model Category {
@@ -54,29 +101,29 @@ model Category {
 }
 
 model Product {
-  id               String        @id @default(cuid())
-  slug             String        @unique
+  id               String         @id @default(cuid())
+  slug             String         @unique
   name             String
   shortDescription String
   description      String
   images           String[]
   priceInfo        String
-  isFeatured       Boolean       @default(false)
+  isFeatured       Boolean        @default(false)
   categoryId       String
-  category         Category      @relation(fields: [categoryId], references: [id])
+  category         Category       @relation(fields: [categoryId], references: [id])
   catalogId        String
-  catalog          Catalog       @relation(fields: [catalogId], references: [id])
+  catalog          Catalog        @relation(fields: [catalogId], references: [id])
   specifications   Specification?
   priceTable       PriceTier[]
 }
 
 model Specification {
-  id          String  @id @default(cuid())
-  material    String
-  capacidade  String
-  dimensoes   String
-  productId   String  @unique
-  product     Product @relation(fields: [productId], references: [id])
+  id         String  @id @default(cuid())
+  material   String
+  capacidade String
+  dimensoes  String
+  productId  String  @unique
+  product    Product @relation(fields: [productId], references: [id])
 }
 
 model PriceTier {
