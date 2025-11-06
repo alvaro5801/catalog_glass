@@ -1,6 +1,7 @@
 // src/app/api/auth/verify-email/route.ts
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client'; // Importar os tipos do Prisma
 
 export async function POST(request: Request) {
   try {
@@ -12,9 +13,10 @@ export async function POST(request: Request) {
     }
 
     // --- 1. Encontrar o token no banco de dados ---
-    // ✅ CORREÇÃO AQUI: Usar o modelo renomeado
     const verificationToken = await prisma.emailVerificationToken.findUnique({
       where: {
+        // Agora que o 'prisma generate' corre no build,
+        // o 'email_token' é reconhecido corretamente.
         email_token: {
           email: email.toLowerCase(),
           token: token,
@@ -34,7 +36,8 @@ export async function POST(request: Request) {
     }
 
     // --- 3. Ativar o Utilizador e Apagar o Token (Transação) ---
-    await prisma.$transaction(async (tx) => {
+    // Adicionar o tipo ao parâmetro 'tx'
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Ativar o utilizador marcando a data de verificação
       await tx.user.update({
         where: {
@@ -46,7 +49,6 @@ export async function POST(request: Request) {
       });
 
       // Apagar o token para que não possa ser usado novamente
-      // ✅ CORREÇÃO AQUI: Usar o modelo renomeado
       await tx.emailVerificationToken.delete({
         where: {
           id: verificationToken.id,
