@@ -42,7 +42,8 @@ export async function POST(request: Request) {
         email: email.toLowerCase(),
         hashedPassword: hashedPassword,
         emailVerified: null, 
-        verificationTokens: {
+        // ✅ CORREÇÃO APLICADA AQUI
+        emailVerificationTokens: {
           create: {
             email: email.toLowerCase(),
             token: verificationToken,

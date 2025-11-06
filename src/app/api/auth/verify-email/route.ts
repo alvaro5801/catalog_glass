@@ -12,7 +12,8 @@ export async function POST(request: Request) {
     }
 
     // --- 1. Encontrar o token no banco de dados ---
-    const verificationToken = await prisma.verificationToken.findUnique({
+    // ✅ CORREÇÃO AQUI: Usar o modelo renomeado
+    const verificationToken = await prisma.emailVerificationToken.findUnique({
       where: {
         email_token: {
           email: email.toLowerCase(),
@@ -29,12 +30,10 @@ export async function POST(request: Request) {
     const hasExpired = new Date(verificationToken.expires) < new Date();
 
     if (hasExpired) {
-      // (Opcional: aqui poderíamos apagar o token expirado)
       return NextResponse.json({ error: 'O código expirou. Por favor, solicite um novo.' }, { status: 410 }); // 410 Gone
     }
 
     // --- 3. Ativar o Utilizador e Apagar o Token (Transação) ---
-    // Usamos uma transação para garantir que ambas as operações funcionam ou falham juntas.
     await prisma.$transaction(async (tx) => {
       // Ativar o utilizador marcando a data de verificação
       await tx.user.update({
@@ -47,7 +46,8 @@ export async function POST(request: Request) {
       });
 
       // Apagar o token para que não possa ser usado novamente
-      await tx.verificationToken.delete({
+      // ✅ CORREÇÃO AQUI: Usar o modelo renomeado
+      await tx.emailVerificationToken.delete({
         where: {
           id: verificationToken.id,
         },
