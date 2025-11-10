@@ -1,4 +1,4 @@
-// src/components/sign-in-form.tsx
+// src/components/sign-in-form-horizontal.tsx
 "use client";
 
 import { useState } from "react";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 
-export function SignInForm() {
+export function SignInFormHorizontal() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,60 +41,55 @@ export function SignInForm() {
   };
 
   return (
-    // O componente agora controla o seu próprio layout
     <div className="w-full sm:w-auto">
-      
-      {/* 1. O formulário principal (alinhado por 'baseline') */}
+      {/* 1. O formulário horizontal com alinhamento 'baseline' */}
       <form
         onSubmit={handleSubmit}
-        className="
-          flex flex-col sm:flex-row items-baseline gap-2
-          w-full
-        "
+        className="flex items-baseline gap-2"
       >
         <Input
-          id="login-email"
+          id="login-email-desktop"
           type="email"
           placeholder="E-mail"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
           disabled={isLoading}
-          className="w-full sm:w-44 h-9 text-sm"
+          className="w-44 h-9 text-sm"
         />
         <Input
-          id="login-password"
+          id="login-password-desktop"
           type="password"
           placeholder="Senha"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
           disabled={isLoading}
-          className="w-full sm:w-36 h-9 text-sm"
+          className="w-36 h-9 text-sm"
         />
         
-        {/* ✅ O SEU BOTÃO "ENTRAR" QUE FALTAVA */}
+        {/* 2. O botão "Entrar" que estava em falta */}
         <Button
           type="submit"
-          className="h-9 px-3 text-sm bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+          className="h-9 px-3 text-sm bg-blue-600 hover:bg-blue-700"
           disabled={isLoading}
         >
           {isLoading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             "Entrar"
           )}
         </Button>
         
-        {/* 2. Botão "Cadastre-se" MOVIDO para aqui */}
-        <Button variant="outline" asChild className="h-9 w-full sm:w-auto">
+        {/* 3. O botão "Cadastre-se" (agora dentro deste componente) */}
+        <Button variant="outline" asChild className="h-9">
           <Link href="/signup">Cadastre-se</Link>
         </Button>
       </form>
 
-      {/* 3. Links e erros ficam em baixo do formulário */}
-      <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
-        <p className="text-xs text-muted-foreground text-center sm:text-left">
+      {/* 4. Links de erro e recuperação em baixo */}
+      <div className="mt-2 flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
           <Link href="#" className="hover:underline text-blue-600">
             Esqueceu a senha?
           </Link>

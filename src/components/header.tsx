@@ -5,37 +5,70 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "./ui/button";
 import { usePathname } from 'next/navigation';
-// import { Input } from "./ui/input"; // REMOVIDO: Já não é necessário
-// 1. IMPORTAR O NOVO FORMULÁRIO DE LOGIN
-import { SignInForm } from "./sign-in-form"; 
+import { useState } from "react"; 
+
+// 1. Importar o painel lateral (Sheet)
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+
+// 2. Importar AMBOS os formulários
+import { SignInForm } from "./sign-in-form"; // Para o painel (vertical)
+import { SignInFormHorizontal } from "./sign-in-form-horizontal"; // (NOVO) Para o desktop (horizontal)
 
 export function Header() {
   const pathname = usePathname();
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   if (pathname === '/saas') {
     return (
       <header className="border-b sticky top-0 bg-white z-10">
-        <div className="container mx-auto px-4 h-24 flex items-center justify-end">
-          {/* 2. SUBSTITUIR A NAVEGAÇÃO ESTÁTICA PELO FORMULÁRIO DE LOGIN */}
-          <nav className="flex items-center gap-2 text-base font-medium">
-            
-            {/* O formulário de login (Inputs + Botão Entrar) */}
-            <div className="hidden sm:block w-72">
-              <SignInForm />
-            </div>
+        <div className="container mx-auto px-4 h-24 flex items-center justify-between">
           
-            {/* O botão "Cadastre-se" permanece */}
-            <Button variant="outline" asChild>
-              <Link href="/signup">Cadastre-se</Link>
-            </Button>
-            
+          {/* Logótipo à Esquerda (para "empurrar" o formulário da direita) */}
+          <Link href="/saas" className="text-2xl font-bold text-gray-800">
+            SuaMarca
+          </Link>
+
+          {/* --- NAV PARA DESKTOP (Ecrãs 'md' ou maiores) --- */}
+          {/* Mostra o novo formulário horizontal */}
+          <nav className="hidden md:block">
+            <SignInFormHorizontal />
           </nav>
+
+          {/* --- NAV PARA MOBILE (Ecrãs 'md' ou menores) --- */}
+          {/* Mostra os botões que abrem o painel lateral */}
+          <nav className="flex md:hidden items-center gap-2">
+            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline">Entrar</Button>
+              </SheetTrigger>
+              <Button asChild className="bg-blue-600 hover:bg-blue-700">
+                <Link href="/signup">Cadastre-se</Link>
+              </Button>
+
+              <SheetContent>
+                <SheetHeader>
+                  <SheetTitle className="text-2xl">Aceder à sua conta</SheetTitle>
+                </SheetHeader>
+                <div className="mt-6">
+                  {/* Usa o formulário vertical original dentro do painel */}
+                  <SignInForm />
+                </div>
+              </SheetContent>
+            </Sheet>
+          </nav>
+
         </div>
       </header>
     );
   }
 
-  // Cabeçalho para o site de produtos ("logado")
+  // (O resto do ficheiro - cabeçalho "logado" - continua igual)
   return (
     <header className="border-b sticky top-0 bg-white z-10">
       <div className="container mx-auto px-4 h-24 flex items-center justify-between overflow-hidden">
