@@ -92,11 +92,16 @@ jest.mock('next/link', () => {
     return <a href={href}>{children}</a>;
   };
 });
+// Em: src/app/__tests__/page.test.tsx
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: (props: React.ComponentProps<'img'>) => {
+  default: (props: React.ComponentProps<'img'> & { fill?: boolean }) => {
+    // ✅ Adicionamos este comentário para ignorar o aviso de 'variável não usada'
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { fill: _fill, ...rest } = props; 
+    
     // eslint-disable-next-line @next/next/no-img-element
-    return <img {...props} alt={props.alt || ""} />;
+    return <img {...rest} alt={props.alt || ""} />; 
   },
 }));
 

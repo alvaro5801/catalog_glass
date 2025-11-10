@@ -5,7 +5,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "./ui/button";
 import { usePathname } from 'next/navigation';
-import { Input } from "./ui/input";
+// import { Input } from "./ui/input"; // REMOVIDO: Já não é necessário
+// 1. IMPORTAR O NOVO FORMULÁRIO DE LOGIN
+import { SignInForm } from "./sign-in-form"; 
 
 export function Header() {
   const pathname = usePathname();
@@ -14,19 +16,19 @@ export function Header() {
     return (
       <header className="border-b sticky top-0 bg-white z-10">
         <div className="container mx-auto px-4 h-24 flex items-center justify-end">
+          {/* 2. SUBSTITUIR A NAVEGAÇÃO ESTÁTICA PELO FORMULÁRIO DE LOGIN */}
           <nav className="flex items-center gap-2 text-base font-medium">
-            <Input type="email" placeholder="E-mail" className="hidden sm:flex" />
-            <Input type="password" placeholder="Senha" className="hidden sm:flex" />
             
-            {/* --- ALTERAÇÃO AQUI --- */}
-            {/* O botão "Entrar" agora aponta para o nosso porteiro/redirecionador */}
-            <Button asChild>
-              <Link href="/login-redirect">Entrar</Link>
-            </Button>
-
+            {/* O formulário de login (Inputs + Botão Entrar) */}
+            <div className="hidden sm:block w-72">
+              <SignInForm />
+            </div>
+          
+            {/* O botão "Cadastre-se" permanece */}
             <Button variant="outline" asChild>
               <Link href="/signup">Cadastre-se</Link>
             </Button>
+            
           </nav>
         </div>
       </header>

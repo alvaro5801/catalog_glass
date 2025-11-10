@@ -34,6 +34,8 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
+    // ✅ ADICIONADO: Garante que os ficheiros de declaração de tipos personalizados em 'src/lib' são incluídos.
+    "src/lib/**/*.d.ts", 
     ".next/types/**/*.ts"
   ],
   "exclude": [
