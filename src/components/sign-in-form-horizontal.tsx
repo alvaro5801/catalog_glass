@@ -90,7 +90,7 @@ export function SignInFormHorizontal() {
       {/* 4. Links de erro e recuperação em baixo */}
       <div className="mt-2 flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
-          <Link href="#" className="hover:underline text-blue-600">
+          <Link href="/forgot-password" className="hover:underline text-blue-600">
             Esqueceu a senha?
           </Link>
         </p>

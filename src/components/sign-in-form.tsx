@@ -95,7 +95,8 @@ export function SignInForm() {
       {/* 3. Links e erros ficam em baixo do formulário */}
       <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
         <p className="text-xs text-muted-foreground text-center sm:text-left">
-          <Link href="#" className="hover:underline text-blue-600">
+          {/* ✅ CORREÇÃO: Agora aponta para a rota correta de recuperação */}
+          <Link href="/forgot-password" className="hover:underline text-blue-600">
             Esqueceu a senha?
           </Link>
         </p>

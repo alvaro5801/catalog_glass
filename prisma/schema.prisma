@@ -11,19 +11,19 @@ datasource db {
 
 // --- MODELO DE UTILIZADOR ATUALIZADO (para Auth.js) ---
 model User {
-  id             String    @id @default(cuid())
-  name           String?
-  email          String    @unique
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
   hashedPassword String? // O nosso campo de senha
-  emailVerified  DateTime? // Já tínhamos este
-  image          String? // Auth.js recomenda este (para fotos de perfil)
+  emailVerified DateTime? // Já tínhamos este
+  image         String? // Auth.js recomenda este (para fotos de perfil)
 
   // Relações do Auth.js
   accounts Account[]
   sessions Session[]
 
   // Nossas relações
-  catalogs                Catalog[]
+  catalogs            Catalog[]
   // ✅ RENOMEADO: A tua relação de tokens foi atualizada
   emailVerificationTokens EmailVerificationToken[]
 }
@@ -38,6 +38,18 @@ model EmailVerificationToken {
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([email, token])
+}
+
+// --- ✅ NOVO: MODELO DE RECUPERAÇÃO DE SENHA ---
+// Este foi o que faltava para o erro desaparecer
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
 
   @@unique([email, token])
 }
