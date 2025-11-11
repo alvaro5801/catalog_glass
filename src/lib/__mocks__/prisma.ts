@@ -1,12 +1,14 @@
 // src/lib/__mocks__/prisma.ts
 
-// Exportamos uma simulação da instância do prisma.
-// O 'jest.fn()' permite que os nossos testes "espiem" estas funções.
 export const prisma = {
   user: {
     findUnique: jest.fn(),
+    update: jest.fn(), // Necessário para o update do emailVerified
   },
-  // NOTA: Se outros testes precisarem de mockar outros modelos 
-  // (ex: emailVerificationToken), terás de os adicionar aqui.
-  // Por agora, o 'user.findUnique' é o único que o nextauth.test.ts precisa.
+  emailVerificationToken: {
+    findUnique: jest.fn(),
+    delete: jest.fn(), // Necessário para apagar o token após uso
+  },
+  // Mock simples para transação: resolve imediatamente
+  $transaction: jest.fn((promises) => Promise.resolve(promises)),
 };

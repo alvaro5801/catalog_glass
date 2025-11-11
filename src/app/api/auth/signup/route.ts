@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto'; // Para gerar o token
 import { sendVerificationEmail } from '@/lib/email'; // O nosso serviço de e-mail
+import { ratelimit } from '@/lib/ratelimit'; // ✅ 1. Importar o limitador
 
 const TOKEN_EXPIRATION_HOURS = 1;
 
@@ -16,6 +17,23 @@ function generateVerificationToken(): string {
 
 export async function POST(request: Request) {
   try {
+    // --- ✅ 2. VERIFICAÇÃO DE RATE LIMIT (Início) ---
+    // Identificar o utilizador pelo IP (para prevenir criação de contas em massa a partir do mesmo local)
+    const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
+
+    // Verificar se deve bloquear (apenas se as credenciais do Upstash estiverem configuradas)
+    if (process.env.UPSTASH_REDIS_REST_URL) {
+      const { success } = await ratelimit.limit(`signup_${ip}`);
+
+      if (!success) {
+        return NextResponse.json(
+          { error: "Demasiadas tentativas. Por favor tente novamente mais tarde." },
+          { status: 429 } // Too Many Requests
+        );
+      }
+    }
+    // --- FIM DA VERIFICAÇÃO ---
+
     const body = await request.json();
     const { name, email, password } = body;
 
@@ -42,7 +60,7 @@ export async function POST(request: Request) {
         email: email.toLowerCase(),
         hashedPassword: hashedPassword,
         emailVerified: null, 
-        // ✅ CORREÇÃO APLICADA AQUI
+        // ✅ Criação do token aninhada (relação correta)
         emailVerificationTokens: {
           create: {
             email: email.toLowerCase(),

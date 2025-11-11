@@ -2,7 +2,6 @@
 
 /**
  * 🧩 Mocks devem vir antes de qualquer import real!
- * Colocamos estes no topo para que o Jest saiba quais os ficheiros a simular.
  */
 jest.mock('@/lib/prisma');
 jest.mock('bcryptjs', () => ({
@@ -10,16 +9,21 @@ jest.mock('bcryptjs', () => ({
   default: { compare: jest.fn() },
 }));
 
-// --- ✅ CORREÇÃO 1: Importamos TODOS os TIPOS no topo ---
-// Estes não afetam o runtime e corrigem o erro 'User is defined but never used'
-// porque o tipo 'User' é necessário para a variável 'authorizeFunction'.
+// ✅ Novo Mock para o Rate Limit
+jest.mock('@/lib/ratelimit', () => ({
+  ratelimit: {
+    limit: jest.fn(),
+  },
+}));
+
 import type { User, Awaitable } from 'next-auth';
 
 /**
- * Dados base (constantes são seguras para definir aqui)
+ * Dados Base (constantes para testes)
  */
 const MOCK_PASSWORD = 'password123';
 const MOCK_HASHED_PASSWORD = 'hashed_password_abc';
+const MOCK_TOKEN = '123456';
 
 const mockValidUser = {
   id: 'user-123',
@@ -30,107 +34,209 @@ const mockValidUser = {
   image: null,
 };
 
+const mockVerificationToken = {
+  id: 'token-id-1',
+  email: 'teste@exemplo.com',
+  token: MOCK_TOKEN,
+  expires: new Date(Date.now() + 3600000), // Expira daqui a 1 hora (Futuro)
+  userId: 'user-123',
+  user: mockValidUser, // O prisma inclui o utilizador aqui
+};
+
 describe('Auth API: authorizeCredentials', () => {
-  // --- As nossas variáveis de teste (apenas declaradas) ---
   let authorizeCredentials: (
     credentials: Record<string, string> | undefined
-  ) => Awaitable<User | null>; // O tipo 'User' é usado aqui
+  ) => Awaitable<User | null>;
 
-  let mockFindUnique: jest.Mock;
+  // Mocks
+  let mockUserFindUnique: jest.Mock;
+  let mockTokenFindUnique: jest.Mock;
+  let mockTokenDelete: jest.Mock;
+  let mockTransaction: jest.Mock;
   let mockCompare: jest.Mock;
+  let mockRateLimit: jest.Mock; // Variável para o mock do rate limit
 
-  // --- O beforeEach faz todo o trabalho de importação ---
+  // Guardar o env original para restaurar depois
+  const originalEnv = process.env;
+
   beforeEach(async () => {
-    // 1. Limpa a cache de módulos.
+    // 1. Limpa a cache de módulos e os mocks anteriores
     jest.resetModules();
-
-    // 2. Importa os MÓDULOS SIMULADOS primeiro (como valores)
-    const { prisma } = await import('@/lib/prisma');
     
-    // ✅ CORREÇÃO 2: Importamos o 'bcrypt' de forma segura
-    // Em: src/app/api/auth/__tests__/nextauth.test.ts (dentro do beforeEach)
-const bcrypt = (await import('bcryptjs')).default as unknown as { compare: jest.Mock };
+    // 2. Configurar Variáveis de Ambiente para o teste
+    process.env = { 
+      ...originalEnv, 
+      UPSTASH_REDIS_REST_URL: 'https://mock-redis.upstash.com' // Garante que o código entra no bloco de rate limit
+    };
 
-    // 3. Atribui as funções simuladas às nossas variáveis de teste
-    mockFindUnique = prisma.user.findUnique as jest.Mock;
-    mockCompare = bcrypt.compare; // Não precisamos de 'as any'
+    // 3. Importar Módulos Mockados
+    const { prisma } = await import('@/lib/prisma');
+    const bcrypt = (await import('bcryptjs')).default as unknown as { compare: jest.Mock };
+    const { ratelimit } = await import('@/lib/ratelimit'); // Importar o mock do ratelimit
 
-    // 4. AGORA, importa o nosso código (como valor)
-    // Isto força a importação da *nova* versão da rota, que usa os mocks
+    // 4. Configurar referências para os mocks
+    mockUserFindUnique = prisma.user.findUnique as jest.Mock;
+    mockTokenFindUnique = prisma.emailVerificationToken.findUnique as jest.Mock;
+    mockTokenDelete = prisma.emailVerificationToken.delete as jest.Mock;
+    mockTransaction = prisma.$transaction as jest.Mock;
+    mockCompare = bcrypt.compare;
+    mockRateLimit = ratelimit.limit as jest.Mock;
+
+    // 5. Configurar Comportamento Padrão (Sucesso)
+    // Por defeito, o rate limit permite a passagem ({ success: true })
+    mockRateLimit.mockResolvedValue({ success: true });
+
+    // 6. Importar a função a testar
     const { authorizeCredentials: importedAuthFunc } = await import(
       '../[...nextauth]/route'
     );
-    
     authorizeCredentials = importedAuthFunc;
   });
 
-  // Os teus testes ('it' blocks) permanecem exatamente iguais.
-  // Eles devem FINALMENTE passar.
+  afterAll(() => {
+    process.env = originalEnv; // Restaurar ambiente original
+  });
 
-  it('✅ deve autenticar e retornar o objeto User em caso de sucesso', async () => {
-    mockFindUnique.mockResolvedValue(mockValidUser);
-    mockCompare.mockResolvedValue(true);
+  // =================================================
+  // 🛡️ CENÁRIO: RATE LIMITING (RNF02.1.1)
+  // =================================================
+  describe('Rate Limiting', () => {
+    it('🚫 deve lançar erro se o limite de tentativas for excedido', async () => {
+      // Simular falha no rate limit (bloqueio)
+      mockRateLimit.mockResolvedValue({ success: false });
 
-    const credentials = { email: 'Teste@Exemplo.com', password: MOCK_PASSWORD };
-    const user = await authorizeCredentials(credentials);
+      await expect(authorizeCredentials({ 
+        email: 'teste@exemplo.com', 
+        password: '123' 
+      })).rejects.toThrow("Muitas tentativas");
 
-    expect(mockFindUnique).toHaveBeenCalledTimes(1);
-    expect(mockFindUnique).toHaveBeenCalledWith({
-      where: { email: 'teste@exemplo.com' },
+      // Verificar se o limitador foi chamado com a chave correta
+      expect(mockRateLimit).toHaveBeenCalledWith('login_teste@exemplo.com');
     });
-    expect(mockCompare).toHaveBeenCalledWith(MOCK_PASSWORD, MOCK_HASHED_PASSWORD);
-    expect(user).toEqual({
-      id: 'user-123',
-      email: 'teste@exemplo.com',
-      name: 'Utilizador Teste',
-      image: null,
+
+    it('✅ deve permitir login se o limite não for excedido', async () => {
+      mockRateLimit.mockResolvedValue({ success: true });
+      mockUserFindUnique.mockResolvedValue(mockValidUser);
+      mockCompare.mockResolvedValue(true);
+
+      const user = await authorizeCredentials({ 
+        email: 'teste@exemplo.com', 
+        password: MOCK_PASSWORD 
+      });
+
+      expect(user).not.toBeNull();
+      expect(mockRateLimit).toHaveBeenCalled();
     });
   });
 
-  it('🚫 deve retornar null se o utilizador não for encontrado', async () => {
-    mockFindUnique.mockResolvedValue(null);
-    const credentials = { email: 'naoexiste@exemplo.com', password: MOCK_PASSWORD };
-    const user = await authorizeCredentials(credentials);
+  // =================================================
+  // 🟢 CENÁRIO A: LOGIN CLÁSSICO (Email + Senha)
+  // =================================================
+  describe('Cenário A: Login com Senha', () => {
+    
+    it('✅ deve autenticar com senha correta', async () => {
+      mockUserFindUnique.mockResolvedValue(mockValidUser);
+      mockCompare.mockResolvedValue(true);
 
-    expect(mockFindUnique).toHaveBeenCalledTimes(1);
-    expect(mockFindUnique).toHaveBeenCalledWith({
-      where: { email: 'naoexiste@exemplo.com' },
+      const user = await authorizeCredentials({ 
+        email: 'teste@exemplo.com', 
+        password: MOCK_PASSWORD 
+      });
+
+      expect(mockUserFindUnique).toHaveBeenCalledWith({ where: { email: 'teste@exemplo.com' } });
+      expect(mockCompare).toHaveBeenCalledWith(MOCK_PASSWORD, MOCK_HASHED_PASSWORD);
+      expect(user).toEqual({
+        id: 'user-123',
+        email: 'teste@exemplo.com',
+        name: 'Utilizador Teste',
+        image: null,
+      });
     });
-    expect(mockCompare).not.toHaveBeenCalled();
-    expect(user).toBeNull();
+
+    it('🚫 deve falhar se utilizador não existir', async () => {
+      mockUserFindUnique.mockResolvedValue(null);
+      const user = await authorizeCredentials({ email: 'naoexiste@exemplo.com', password: MOCK_PASSWORD });
+      expect(user).toBeNull();
+    });
+
+    it('🚫 deve falhar se a senha estiver errada', async () => {
+      mockUserFindUnique.mockResolvedValue(mockValidUser);
+      mockCompare.mockResolvedValue(false);
+      const user = await authorizeCredentials({ email: 'teste@exemplo.com', password: 'errada' });
+      expect(user).toBeNull();
+    });
   });
 
-  it('🚫 deve retornar null se o e-mail não estiver verificado', async () => {
-    const unverifiedUser = { ...mockValidUser, emailVerified: null };
-    mockFindUnique.mockResolvedValue(unverifiedUser);
-    const credentials = { email: 'teste@exemplo.com', password: MOCK_PASSWORD };
-    const user = await authorizeCredentials(credentials);
+  // =================================================
+  // 🔵 CENÁRIO B: LOGIN VIA TOKEN (RF01.4)
+  // =================================================
+  describe('Cenário B: Login via Token', () => {
 
-    expect(mockFindUnique).toHaveBeenCalledTimes(1);
-    expect(mockCompare).not.toHaveBeenCalled();
-    expect(user).toBeNull();
-  });
+    it('✅ deve autenticar e ativar conta com token válido', async () => {
+      // Simular que o token existe na BD e é válido
+      mockTokenFindUnique.mockResolvedValue(mockVerificationToken);
+      mockTransaction.mockResolvedValue(true); // Simula sucesso da transação
 
-  it('🚫 deve retornar null se a senha for inválida', async () => {
-    mockFindUnique.mockResolvedValue(mockValidUser);
-    mockCompare.mockResolvedValue(false);
-    const credentials = { email: 'teste@exemplo.com', password: 'senhaerrada' };
-    const user = await authorizeCredentials(credentials);
+      const user = await authorizeCredentials({ 
+        email: 'teste@exemplo.com', 
+        token: MOCK_TOKEN // Enviamos token em vez de senha
+      });
 
-    expect(mockFindUnique).toHaveBeenCalledTimes(1);
-    expect(mockCompare).toHaveBeenCalledWith('senhaerrada', MOCK_HASHED_PASSWORD);
-    expect(user).toBeNull();
-  });
+      // 1. Verificou se o token existe?
+      expect(mockTokenFindUnique).toHaveBeenCalledWith({
+        where: {
+          email_token: {
+            email: 'teste@exemplo.com',
+            token: MOCK_TOKEN,
+          },
+        },
+        include: { user: true },
+      });
 
-  it('🚫 deve retornar null se credenciais estiverem ausentes ou incompletas', async () => {
-    const user1 = await authorizeCredentials({ email: 'teste@exemplo.com', password: '' });
-    const user2 = await authorizeCredentials({ email: '', password: '123' });
-    const user3 = await authorizeCredentials(undefined);
+      // 2. Executou a transação (Update User + Delete Token)?
+      expect(mockTransaction).toHaveBeenCalled();
 
-    expect(user1).toBeNull();
-    expect(user2).toBeNull();
-    expect(user3).toBeNull();
-    expect(mockFindUnique).not.toHaveBeenCalled();
-    expect(mockCompare).not.toHaveBeenCalled();
+      // 3. Verificou se a função de apagar o token foi chamada?
+      expect(mockTokenDelete).toHaveBeenCalledWith({
+        where: { id: mockVerificationToken.id },
+      });
+      
+      // 4. Retornou o utilizador?
+      expect(user).toEqual({
+        id: 'user-123',
+        email: 'teste@exemplo.com',
+        name: 'Utilizador Teste',
+        image: null,
+      });
+    });
+
+    it('🚫 deve falhar se o token não for encontrado', async () => {
+      mockTokenFindUnique.mockResolvedValue(null); // Token não existe
+
+      const user = await authorizeCredentials({ 
+        email: 'teste@exemplo.com', 
+        token: '999999' // Token errado
+      });
+
+      expect(user).toBeNull();
+      expect(mockTransaction).not.toHaveBeenCalled(); // Não deve tentar apagar nada
+    });
+
+    it('🚫 deve falhar se o token estiver expirado', async () => {
+      // Criar token expirado (1 hora atrás)
+      const expiredToken = {
+        ...mockVerificationToken,
+        expires: new Date(Date.now() - 3600000), 
+      };
+      mockTokenFindUnique.mockResolvedValue(expiredToken);
+
+      const user = await authorizeCredentials({ 
+        email: 'teste@exemplo.com', 
+        token: MOCK_TOKEN 
+      });
+
+      expect(user).toBeNull(); // Deve rejeitar
+      expect(mockTransaction).not.toHaveBeenCalled();
+    });
   });
 });
