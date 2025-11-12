@@ -2,28 +2,32 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { CategoryRepository } from "@/domain/repositories/CategoryRepository";
 import { CategoryService } from "@/domain/services/CategoryService";
+import { getAuthenticatedUser, getUserCatalogId } from "@/lib/auth-helper";
 
 export const dynamic = 'force-dynamic';
 
 const categoryRepository = new CategoryRepository();
 const categoryService = new CategoryService(categoryRepository);
 
-const MOCK_CATALOG_ID = "clxrz8hax00003b6khe69046c";
-
-// --- FUNÇÃO PUT (Atualizar) ---
+// ✅ PUT PROTEGIDO
 export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ name: string }> }
 ) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user || !user.email) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+    const catalogId = await getUserCatalogId(user.email);
     const { name } = await context.params;
     const originalCategoryName = decodeURIComponent(name);
     const { newName } = await request.json();
 
-    // ✅ CORREÇÃO: Removida a variável 'updatedCategory'
-    await categoryService.updateCategory(originalCategoryName, newName, MOCK_CATALOG_ID);
+    // O Service já usa o catalogId para encontrar a categoria, 
+    // o que garante implicitamente que só edita se pertencer ao user.
+    await categoryService.updateCategory(originalCategoryName, newName, catalogId);
 
-    const allCategories = await categoryService.getAllCategories(MOCK_CATALOG_ID);
+    const allCategories = await categoryService.getAllCategories(catalogId);
     return NextResponse.json(allCategories, { status: 200 });
 
   } catch (error) {
@@ -33,18 +37,22 @@ export async function PUT(
   }
 }
 
-// --- FUNÇÃO DELETE ---
+// ✅ DELETE PROTEGIDO
 export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ name: string }> }
 ) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user || !user.email) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+    const catalogId = await getUserCatalogId(user.email);
     const { name } = await context.params;
     const categoryName = decodeURIComponent(name);
     
-    await categoryService.deleteCategory(categoryName, MOCK_CATALOG_ID);
+    await categoryService.deleteCategory(categoryName, catalogId);
 
-    const allCategories = await categoryService.getAllCategories(MOCK_CATALOG_ID);
+    const allCategories = await categoryService.getAllCategories(catalogId);
     return NextResponse.json(allCategories, { status: 200 });
 
   } catch (error) {

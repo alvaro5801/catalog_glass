@@ -1,9 +1,9 @@
 // src/app/api/products/[id]/__tests__/route.test.ts
 import { GET, PUT, DELETE } from '../route';
-import type { NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 import type { Product, Specification, PriceTier } from '@prisma/client';
 
-// Mock do ProductService (como estava)
+// --- 1. MOCKS DOS SERVIÇOS ---
 jest.mock('@/domain/services/ProductService', () => {
   const mockGetProductById = jest.fn();
   const mockUpdateProduct = jest.fn();
@@ -18,77 +18,164 @@ jest.mock('@/domain/services/ProductService', () => {
   };
 });
 
+// Mockar o Repositório
+jest.mock('@/domain/repositories/ProductRepository', () => ({
+  ProductRepository: jest.fn().mockImplementation(() => {}),
+}));
+
+// ✅ NOVO: Mockar o Auth Helper para simular login e catálogo
+jest.mock('@/lib/auth-helper', () => ({
+  getAuthenticatedUser: jest.fn(),
+  getUserCatalogId: jest.fn(),
+}));
+
+// --- 2. REFERÊNCIAS AOS MOCKS ---
 const { __mocks__ } = jest.requireMock('@/domain/services/ProductService');
 const { mockGetProductById, mockUpdateProduct, mockDeleteProduct } = __mocks__;
+// Importar as funções mockadas do auth-helper
+import { getAuthenticatedUser, getUserCatalogId } from '@/lib/auth-helper';
 
-type MockProduct = Product & { specifications: Specification | null; priceTable: PriceTier[] };
+// --- 3. DADOS DE TESTE ---
+const MOCK_CATALOG_ID = 'catalog_user_123'; // ID do catálogo do utilizador
+
+// Produto que pertence ao utilizador (catalogId coincide)
+const mockProduct: Product & { specifications: Specification | null; priceTable: PriceTier[] } = {
+  id: 'prod_1',
+  name: 'Copo Long Drink',
+  slug: 'copo-long-drink',
+  shortDescription: 'Desc',
+  description: 'Desc Completa',
+  images: ['/img.jpg'],
+  priceInfo: 'R$ 10',
+  isFeatured: false,
+  categoryId: 'cat_1',
+  catalogId: MOCK_CATALOG_ID, // ✅ Importante: Pertence ao user
+  specifications: null,
+  priceTable: [],
+  // createdAt e updatedAt removidos pois não existem no schema Prisma atual
+};
 
 describe('API Route: /api/products/[id]', () => {
-  let mockProduct: MockProduct;
-
+  
   beforeEach(() => {
-    mockGetProductById.mockClear();
-    mockUpdateProduct.mockClear();
-    mockDeleteProduct.mockClear();
-    mockProduct = { 
-      id: 'prod_1', name: 'Produto A', categoryId: 'cat_1', slug: 'produto-a', 
-      shortDescription: '', description: '', images: [], specifications: null, 
-      priceTable: [{ id: 'pt1', quantity: '10-29', price: 10, productId: 'prod_1' }], 
-      priceInfo: '', isFeatured: false, catalogId: 'cat123' 
-    };
+    jest.clearAllMocks();
+    // ✅ Configuração Padrão de Segurança para os testes
+    // Simula que o utilizador está logado e é dono do catálogo MOCK_CATALOG_ID
+    (getAuthenticatedUser as jest.Mock).mockResolvedValue({ email: 'admin@teste.com' });
+    (getUserCatalogId as jest.Mock).mockResolvedValue(MOCK_CATALOG_ID);
   });
 
+  // --- GET (Público) ---
   describe('GET', () => {
-    it('deve retornar um produto existente com status 200', async () => {
+    it('deve retornar o produto se encontrado (200)', async () => {
       mockGetProductById.mockResolvedValue(mockProduct);
-      const request = new Request('http://localhost/api/products/prod_1');
-      // ✅ CORREÇÃO: Embrulhar o 'context' numa Promise
-      const context = { params: Promise.resolve({ id: 'prod_1' }) }; 
-      const response = await GET(request as NextRequest, context);
-      const product = await response.json();
+      
+      const context = { params: Promise.resolve({ id: 'prod_1' }) };
+      const request = new NextRequest('http://localhost/api/products/prod_1');
+      
+      const response = await GET(request, context);
+      const body = await response.json();
+
       expect(response.status).toBe(200);
-      expect(product).toEqual(mockProduct);
+      expect(body).toEqual(mockProduct);
     });
 
-    it('deve retornar um erro 404 se o produto não for encontrado', async () => {
+    it('deve retornar 404 se o produto não existir', async () => {
       mockGetProductById.mockResolvedValue(null);
-      const request = new Request('http://localhost/api/products/99');
-      // ✅ CORREÇÃO: Embrulhar o 'context' numa Promise
-      const context = { params: Promise.resolve({ id: '99' }) };
-      const response = await GET(request as NextRequest, context);
+      
+      const context = { params: Promise.resolve({ id: 'prod_999' }) };
+      const request = new NextRequest('http://localhost/api/products/prod_999');
+      
+      const response = await GET(request, context);
       const body = await response.json();
+
       expect(response.status).toBe(404);
-      expect(body.error).toBe('Produto não encontrado.'); 
+      expect(body.error).toBe('Produto não encontrado.');
     });
   });
 
+  // --- PUT (Protegido) ---
   describe('PUT', () => {
-    it('deve chamar o serviço de atualização e retornar o produto atualizado com status 200', async () => {
-      const updatedData = { name: 'Produto A Atualizado' };
-      const updatedProduct = { ...mockProduct, ...updatedData };
+    it('deve atualizar o produto com sucesso (200)', async () => {
+      // 1. O produto existe e pertence ao user (verificado pelo mockProduct.catalogId)
+      mockGetProductById.mockResolvedValue(mockProduct);
+      
+      // 2. Simular o update
+      const updatedProduct = { ...mockProduct, name: 'Copo Atualizado' };
       mockUpdateProduct.mockResolvedValue(updatedProduct);
 
-      const request = new Request('http://localhost/api/products/prod_1', {
+      const body = { name: 'Copo Atualizado' };
+      const request = new NextRequest('http://localhost/api/products/prod_1', {
         method: 'PUT',
-        body: JSON.stringify(updatedData),
+        body: JSON.stringify(body),
       });
-      // ✅ CORREÇÃO: Embrulhar o 'context' numa Promise
       const context = { params: Promise.resolve({ id: 'prod_1' }) };
-      const response = await PUT(request as NextRequest, context);
+
+      const response = await PUT(request, context);
       const product = await response.json();
+
       expect(response.status).toBe(200);
       expect(product).toEqual(updatedProduct);
+      
+      // Verifica se verificou a propriedade antes de atualizar
+      expect(mockGetProductById).toHaveBeenCalledWith('prod_1');
+    });
+
+    it('🚫 deve retornar 403 se tentar editar produto de outro catálogo', async () => {
+      // Produto de OUTRO catálogo
+      const otherProduct = { ...mockProduct, catalogId: 'outro_catalogo_id' };
+      mockGetProductById.mockResolvedValue(otherProduct);
+
+      const request = new NextRequest('http://localhost/api/products/prod_1', {
+        method: 'PUT',
+        body: JSON.stringify({ name: 'Hacker' }),
+      });
+      const context = { params: Promise.resolve({ id: 'prod_1' }) };
+
+      const response = await PUT(request, context);
+      const body = await response.json();
+
+      expect(response.status).toBe(403);
+      expect(body.error).toMatch(/Acesso proibido/);
+      expect(mockUpdateProduct).not.toHaveBeenCalled();
+    });
+
+    it('🚫 deve retornar 401 se não autenticado', async () => {
+      (getAuthenticatedUser as jest.Mock).mockResolvedValue(null);
+
+      const request = new NextRequest('http://localhost/api/products/prod_1', { method: 'PUT', body: JSON.stringify({}) });
+      const context = { params: Promise.resolve({ id: 'prod_1' }) };
+
+      const response = await PUT(request, context);
+      expect(response.status).toBe(401);
     });
   });
 
+  // --- DELETE (Protegido) ---
   describe('DELETE', () => {
-    it('deve apagar um produto existente e retornar status 204', async () => {
-      mockDeleteProduct.mockResolvedValue(undefined); 
-      const request = new Request('http://localhost/api/products/prod_2', { method: 'DELETE' });
-      // ✅ CORREÇÃO: Embrulhar o 'context' numa Promise
-      const context = { params: Promise.resolve({ id: 'prod_2' }) };
-      const response = await DELETE(request as NextRequest, context);
+    it('deve apagar um produto existente (204)', async () => {
+      mockGetProductById.mockResolvedValue(mockProduct); // Existe e é meu
+
+      const request = new NextRequest('http://localhost/api/products/prod_1', { method: 'DELETE' });
+      const context = { params: Promise.resolve({ id: 'prod_1' }) };
+
+      const response = await DELETE(request, context);
+
       expect(response.status).toBe(204);
+      expect(mockDeleteProduct).toHaveBeenCalledWith('prod_1');
+    });
+
+    it('🚫 deve retornar 403 se tentar apagar produto de outro user', async () => {
+      const otherProduct = { ...mockProduct, catalogId: 'outro_catalogo_id' };
+      mockGetProductById.mockResolvedValue(otherProduct);
+
+      const request = new NextRequest('http://localhost/api/products/prod_1', { method: 'DELETE' });
+      const context = { params: Promise.resolve({ id: 'prod_1' }) };
+
+      const response = await DELETE(request, context);
+
+      expect(response.status).toBe(403);
+      expect(mockDeleteProduct).not.toHaveBeenCalled();
     });
   });
 });

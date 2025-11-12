@@ -2,22 +2,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ProductRepository } from "@/domain/repositories/ProductRepository";
 import { ProductService } from "@/domain/services/ProductService";
+import { getAuthenticatedUser, getUserCatalogId } from "@/lib/auth-helper";
 
 const productRepository = new ProductRepository();
 const productService = new ProductService(productRepository);
 
 export const dynamic = 'force-dynamic';
 
-// --- FUNÇÃO GET (Obter um produto por ID) ---
+// GET: Público (para a vitrine)
 export async function GET(
   request: NextRequest,
-  // ✅ CORREÇÃO: Mudar a assinatura para o que o build espera
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // ✅ CORREÇÃO: Usar 'await' para extrair os params
     const { id } = await context.params;
-    
     const product = await productService.getProductById(id);
     if (!product) {
       return NextResponse.json({ error: "Produto não encontrado." }, { status: 404 });
@@ -29,41 +27,63 @@ export async function GET(
   }
 }
 
-// --- FUNÇÃO PUT (Atualizar um produto) ---
+// ✅ PUT PROTEGIDO
 export async function PUT(
   request: NextRequest,
-  // ✅ CORREÇÃO: Mudar a assinatura para o que o build espera
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // ✅ CORREÇÃO: Usar 'await' para extrair os params
+    // 1. Auth Check
+    const user = await getAuthenticatedUser();
+    if (!user || !user.email) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
     const { id } = await context.params;
+    const catalogId = await getUserCatalogId(user.email);
+
+    // 2. Verificar Propriedade (O produto pertence ao catálogo do user?)
+    const existingProduct = await productService.getProductById(id);
+    if (!existingProduct) return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 });
     
+    if (existingProduct.catalogId !== catalogId) {
+        return NextResponse.json({ error: "Acesso proibido a este produto." }, { status: 403 });
+    }
+
     const body = await request.json();
     const updatedProduct = await productService.updateProduct(id, body);
     return NextResponse.json(updatedProduct);
+
   } catch (error) {
     const err = error as Error;
-    const status = err.message.includes("not found") ? 404 : 400;
-    return NextResponse.json({ error: err.message }, { status });
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
-// --- FUNÇÃO DELETE (Apagar um produto) ---
+// ✅ DELETE PROTEGIDO
 export async function DELETE(
   request: NextRequest,
-  // ✅ CORREÇÃO: Mudar a assinatura para o que o build espera
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // ✅ CORREÇÃO: Usar 'await' para extrair os params
+    // 1. Auth Check
+    const user = await getAuthenticatedUser();
+    if (!user || !user.email) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
     const { id } = await context.params;
+    const catalogId = await getUserCatalogId(user.email);
+
+    // 2. Verificar Propriedade
+    const existingProduct = await productService.getProductById(id);
+    if (!existingProduct) return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 });
+
+    if (existingProduct.catalogId !== catalogId) {
+        return NextResponse.json({ error: "Acesso proibido a este produto." }, { status: 403 });
+    }
     
     await productService.deleteProduct(id);
-    return new NextResponse(null, { status: 204 }); // Sucesso, sem conteúdo
+    return new NextResponse(null, { status: 204 });
+
   } catch (error) {
     const err = error as Error;
-    const status = err.message.includes("não encontrado") ? 404 : 400;
-    return NextResponse.json({ error: err.message }, { status });
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

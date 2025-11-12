@@ -2,7 +2,7 @@
 import { DELETE, PUT } from '../route';
 import type { NextRequest } from 'next/server';
 
-// Simulação (como estava, correta)
+// --- 1. Mocks dos Serviços ---
 jest.mock('@/domain/services/CategoryService', () => {
   const mockUpdateCategory = jest.fn();
   const mockDeleteCategory = jest.fn();
@@ -18,14 +18,27 @@ jest.mock('@/domain/services/CategoryService', () => {
   };
 });
 
+// ✅ NOVO: Mockar o Auth Helper para simular login e catálogo
+jest.mock('@/lib/auth-helper', () => ({
+  getAuthenticatedUser: jest.fn(),
+  getUserCatalogId: jest.fn(),
+}));
+
+// --- 2. Referências aos Mocks ---
 const { __mocks__ } = jest.requireMock('@/domain/services/CategoryService');
 const { mockUpdateCategory, mockDeleteCategory, mockGetAllCategories } = __mocks__;
+import { getAuthenticatedUser, getUserCatalogId } from '@/lib/auth-helper';
+
+const MOCK_CATALOG_ID = 'catalog_user_123';
 
 describe('API Route: /api/categories/[name]', () => {
+  
   beforeEach(() => {
-    mockUpdateCategory.mockReset();
-    mockDeleteCategory.mockReset();
-    mockGetAllCategories.mockReset();
+    jest.clearAllMocks();
+    
+    // ✅ Configuração Padrão: Utilizador Autenticado
+    (getAuthenticatedUser as jest.Mock).mockResolvedValue({ email: 'admin@teste.com' });
+    (getUserCatalogId as jest.Mock).mockResolvedValue(MOCK_CATALOG_ID);
   });
 
   describe('DELETE', () => {
@@ -35,17 +48,28 @@ describe('API Route: /api/categories/[name]', () => {
 
       const categoryName = 'Comidas';
       const request = new Request(`http://localhost/api/categories/${categoryName}`, { method: 'DELETE' });
-      
-      // ✅ CORREÇÃO: Embrulhar os 'params' numa Promise.resolve()
       const context = { params: Promise.resolve({ name: categoryName }) }; 
       
       const response = await DELETE(request as NextRequest, context);
       const body = await response.json();
 
-      expect(mockDeleteCategory).toHaveBeenCalledWith(categoryName, expect.any(String));
-      expect(mockGetAllCategories).toHaveBeenCalled(); 
+      // Verifica se usou o ID do catálogo correto (segurança)
+      expect(mockDeleteCategory).toHaveBeenCalledWith(categoryName, MOCK_CATALOG_ID);
+      expect(mockGetAllCategories).toHaveBeenCalledWith(MOCK_CATALOG_ID); 
       expect(response.status).toBe(200);
       expect(body).toEqual([{ id: 'cat_2', name: 'Bebidas' }]); 
+    });
+
+    it('🚫 deve retornar 401 se o utilizador não estiver logado', async () => {
+      (getAuthenticatedUser as jest.Mock).mockResolvedValue(null); // Sem sessão
+
+      const request = new Request('http://localhost/api/categories/Comidas', { method: 'DELETE' });
+      const context = { params: Promise.resolve({ name: 'Comidas' }) };
+
+      const response = await DELETE(request as NextRequest, context);
+      
+      expect(response.status).toBe(401);
+      expect(mockDeleteCategory).not.toHaveBeenCalled();
     });
   });
 
@@ -59,17 +83,31 @@ describe('API Route: /api/categories/[name]', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newName: 'Pratos Quentes' }),
       });
-      
-      // ✅ CORREÇÃO: Embrulhar os 'params' numa Promise.resolve()
       const context = { params: Promise.resolve({ name: 'Comidas' }) };
       
       const response = await PUT(request as NextRequest, context);
       const body = await response.json();
 
-      expect(mockUpdateCategory).toHaveBeenCalledWith('Comidas', 'Pratos Quentes', expect.any(String));
-      expect(mockGetAllCategories).toHaveBeenCalled();
+      // Verifica se usou o ID do catálogo correto
+      expect(mockUpdateCategory).toHaveBeenCalledWith('Comidas', 'Pratos Quentes', MOCK_CATALOG_ID);
+      expect(mockGetAllCategories).toHaveBeenCalledWith(MOCK_CATALOG_ID);
       expect(response.status).toBe(200);
       expect(body).toEqual([{ id: 'cat_1', name: 'Pratos Quentes' }]);
+    });
+
+    it('🚫 deve retornar 401 se o utilizador não estiver logado', async () => {
+      (getAuthenticatedUser as jest.Mock).mockResolvedValue(null);
+
+      const request = new Request('http://localhost/api/categories/Comidas', { 
+        method: 'PUT',
+        body: JSON.stringify({ newName: 'Teste' })
+      });
+      const context = { params: Promise.resolve({ name: 'Comidas' }) };
+
+      const response = await PUT(request as NextRequest, context);
+      
+      expect(response.status).toBe(401);
+      expect(mockUpdateCategory).not.toHaveBeenCalled();
     });
   });
 });

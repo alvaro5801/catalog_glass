@@ -5,25 +5,27 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // ✅ ADICIONADO: Necessário para migrações no Neon Tech (Connection Pooling)
+  directUrl = env("DIRECT_URL")
 }
 
 // --- MODELO DE UTILIZADOR ATUALIZADO (para Auth.js) ---
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
+  id             String    @id @default(cuid())
+  name           String?
+  email          String    @unique
   hashedPassword String? // O nosso campo de senha
-  emailVerified DateTime? // Já tínhamos este
-  image         String? // Auth.js recomenda este (para fotos de perfil)
+  emailVerified  DateTime? // Já tínhamos este
+  image          String? // Auth.js recomenda este (para fotos de perfil)
 
   // Relações do Auth.js
   accounts Account[]
   sessions Session[]
 
   // Nossas relações
-  catalogs            Catalog[]
+  catalogs                Catalog[]
   // ✅ RENOMEADO: A tua relação de tokens foi atualizada
   emailVerificationTokens EmailVerificationToken[]
 }
@@ -43,7 +45,6 @@ model EmailVerificationToken {
 }
 
 // --- ✅ NOVO: MODELO DE RECUPERAÇÃO DE SENHA ---
-// Este foi o que faltava para o erro desaparecer
 model PasswordResetToken {
   id        String   @id @default(cuid())
   email     String
@@ -92,41 +93,56 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// --- OS TEUS MODELOS (Sem alterações) ---
+// --- OS TEUS MODELOS (Com Timestamps adicionados) ---
 
 model Catalog {
-  id         String     @id @default(cuid())
-  userId     String
-  user       User       @relation(fields: [userId], references: [id])
-  products   Product[]
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  products  Product[]
   categories Category[]
+  
+  // ✅ ADICIONADO: Para saber quando foi criado/atualizado
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Category {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   name      String
   catalogId String
-  catalog   Catalog   @relation(fields: [catalogId], references: [id])
+  catalog   Catalog  @relation(fields: [catalogId], references: [id])
   products  Product[]
+
+  // ✅ ADICIONADO
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([name, catalogId])
 }
 
 model Product {
-  id               String         @id @default(cuid())
-  slug             String         @unique
+  id               String   @id @default(cuid())
+  slug             String   @unique
   name             String
   shortDescription String
   description      String
   images           String[]
   priceInfo        String
-  isFeatured       Boolean        @default(false)
+  isFeatured       Boolean  @default(false)
+  
   categoryId       String
-  category         Category       @relation(fields: [categoryId], references: [id])
+  category         Category @relation(fields: [categoryId], references: [id])
+  
   catalogId        String
-  catalog          Catalog        @relation(fields: [catalogId], references: [id])
+  catalog          Catalog  @relation(fields: [catalogId], references: [id])
+  
   specifications   Specification?
   priceTable       PriceTier[]
+
+  // ✅ ADICIONADO: Resolve o erro de TypeScript nos testes
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model Specification {
@@ -135,7 +151,8 @@ model Specification {
   capacidade String
   dimensoes  String
   productId  String  @unique
-  product    Product @relation(fields: [productId], references: [id])
+  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade) 
+  // Nota: Adicionei onDelete: Cascade acima para limpar specs se o produto for apagado
 }
 
 model PriceTier {
@@ -143,5 +160,6 @@ model PriceTier {
   quantity  String
   price     Float
   productId String
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // Nota: Adicionei onDelete: Cascade acima para limpar preços se o produto for apagado
 }
