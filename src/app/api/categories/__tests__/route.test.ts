@@ -26,7 +26,7 @@ jest.mock('@/domain/repositories/CategoryRepository', () => {
   };
 });
 
-// ✅ NOVO: Mockar o Auth Helper para simular login e catálogo
+// ✅ Mockar o Auth Helper para simular login e catálogo
 jest.mock('@/lib/auth-helper', () => ({
   getAuthenticatedUser: jest.fn(),
   getUserCatalogId: jest.fn(),
@@ -40,10 +40,23 @@ import { getAuthenticatedUser, getUserCatalogId } from '@/lib/auth-helper';
 
 // --- 3. DADOS DE TESTE ---
 const MOCK_USER_CATALOG_ID = 'catalog_user_secure_123';
+const fixedDate = new Date('2024-01-01T00:00:00Z');
 
 const mockCategories: Category[] = [
-  { id: 'cat_1', name: 'Copos', catalogId: MOCK_USER_CATALOG_ID },
-  { id: 'cat_2', name: 'Taças', catalogId: MOCK_USER_CATALOG_ID },
+  { 
+    id: 'cat_1', 
+    name: 'Copos', 
+    catalogId: MOCK_USER_CATALOG_ID,
+    createdAt: fixedDate,
+    updatedAt: fixedDate
+  },
+  { 
+    id: 'cat_2', 
+    name: 'Taças', 
+    catalogId: MOCK_USER_CATALOG_ID,
+    createdAt: fixedDate,
+    updatedAt: fixedDate
+  },
 ];
 
 describe('API Route: /api/categories', () => {
@@ -65,11 +78,14 @@ describe('API Route: /api/categories', () => {
 
       // Execução
       const response = await GET();
+      // Nota: O JSON.stringify converte Datas para strings, precisamos normalizar isso no teste real se falhar,
+      // mas como estamos a mockar o retorno direto, o Jest costuma aceitar.
       const body = await response.json();
 
       // Verificação
       expect(response.status).toBe(200);
-      expect(body).toEqual(mockCategories);
+      // Convertemos as datas para string para comparar com o JSON retornado
+      expect(body).toEqual(JSON.parse(JSON.stringify(mockCategories)));
       
       // ✅ Verifica se buscou o ID correto do utilizador
       expect(getUserCatalogId).toHaveBeenCalledWith('teste@admin.com');
@@ -77,7 +93,7 @@ describe('API Route: /api/categories', () => {
     });
 
     it('deve retornar um erro 500 se o serviço falhar', async () => {
-      // Simular login para passar a barreira de auth (ou mockar comportamento publico se aplicável)
+      // Simular login 
       (getAuthenticatedUser as jest.Mock).mockResolvedValue({ email: 'teste@admin.com' });
       (getUserCatalogId as jest.Mock).mockResolvedValue(MOCK_USER_CATALOG_ID);
       
@@ -113,7 +129,13 @@ describe('API Route: /api/categories', () => {
     });
 
     it('✅ deve criar uma nova categoria para o catálogo do utilizador (201)', async () => {
-      const newCategory = { id: 'cat_3', name: 'Canecas', catalogId: MOCK_USER_CATALOG_ID };
+      const newCategory: Category = { 
+        id: 'cat_3', 
+        name: 'Canecas', 
+        catalogId: MOCK_USER_CATALOG_ID,
+        createdAt: fixedDate,
+        updatedAt: fixedDate
+      };
       const requestBody = { name: 'Canecas' };
 
       // Preparação:
@@ -135,9 +157,9 @@ describe('API Route: /api/categories', () => {
 
       // Verificação
       expect(response.status).toBe(201);
-      expect(body).toEqual(newCategory);
+      expect(body).toEqual(JSON.parse(JSON.stringify(newCategory)));
       
-      // ✅ CRÍTICO: Verificar se criou no catálogo do utilizador (e não no mock antigo)
+      // ✅ CRÍTICO: Verificar se criou no catálogo do utilizador
       expect(mockAddNewCategory).toHaveBeenCalledWith('Canecas', MOCK_USER_CATALOG_ID);
     });
 

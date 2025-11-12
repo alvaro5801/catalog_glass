@@ -17,12 +17,12 @@ jest.mock('@/domain/services/ProductService', () => {
   };
 });
 
-// Mockar o Repositório (dependência interna do serviço)
+// Mockar o Repositório
 jest.mock('@/domain/repositories/ProductRepository', () => ({
   ProductRepository: jest.fn().mockImplementation(() => {}),
 }));
 
-// ✅ NOVO: Mockar o Auth Helper para simular login e catálogo
+// ✅ Mockar o Auth Helper
 jest.mock('@/lib/auth-helper', () => ({
   getAuthenticatedUser: jest.fn(),
   getUserCatalogId: jest.fn(),
@@ -31,12 +31,12 @@ jest.mock('@/lib/auth-helper', () => ({
 // --- 2. REFERÊNCIAS AOS MOCKS ---
 const { __mocks__ } = jest.requireMock('@/domain/services/ProductService');
 const { mockGetProducts, mockCreateProduct } = __mocks__;
-// Importar as funções mockadas do auth-helper
 import { getAuthenticatedUser, getUserCatalogId } from '@/lib/auth-helper';
 
 // --- 3. DADOS DE TESTE ---
 const MOCK_CATALOG_ID = 'catalog_123_user_real';
 
+// ✅ CORREÇÃO: Adicionados createdAt e updatedAt
 const mockProduct: Product & { specifications: Specification | null; priceTable: PriceTier[] } = {
   id: 'prod_1', 
   name: 'Copo Long Drink', 
@@ -50,10 +50,10 @@ const mockProduct: Product & { specifications: Specification | null; priceTable:
   catalogId: MOCK_CATALOG_ID, 
   specifications: null, 
   priceTable: [],
+  createdAt: new Date(), // Adicionado para corrigir erro de tipo
+  updatedAt: new Date(), // Adicionado para corrigir erro de tipo
 };
 
-// O corpo da requisição (o que vem do frontend)
-// Nota: Não enviamos 'catalogId' aqui porque o backend agora decide isso.
 const requestBody = {
   name: 'Novo Copo', 
   slug: 'novo-copo', 
@@ -62,7 +62,7 @@ const requestBody = {
   images: ['/novo.jpg'], 
   priceInfo: '...', 
   isFeatured: false,
-  categoryId: 'cat_1', // O backend vai converter isto para { connect: ... }
+  categoryId: 'cat_1', 
   specifications: { create: { material: 'Novo', capacidade: '100ml', dimensoes: '10cm' } },
   priceTable: { create: [{ quantity: '1-10', price: 10 }] },
 };
@@ -78,13 +78,15 @@ describe('API Route: /api/products', () => {
     it('deve retornar a lista de produtos (modo vitrine) e status 200', async () => {
       mockGetProducts.mockResolvedValue([mockProduct]); 
       
-      // GET não precisa de auth por enquanto (conforme a nossa regra de negócio atual)
       const req = new NextRequest('http://localhost/api/products');
       const response = await GET(req); 
       const body = await response.json();
 
       expect(response.status).toBe(200);
-      expect(body).toEqual([mockProduct]);
+      
+      // ✅ CORREÇÃO: Usamos JSON.parse(JSON.stringify(...)) para normalizar as datas
+      // (A API devolve strings ISO, o mock tem objetos Date)
+      expect(body).toEqual(JSON.parse(JSON.stringify([mockProduct])));
     });
   });
 
@@ -92,7 +94,6 @@ describe('API Route: /api/products', () => {
   describe('POST', () => {
     
     it('🚫 deve retornar 401 se o utilizador NÃO estiver logado', async () => {
-      // Simular sem sessão
       (getAuthenticatedUser as jest.Mock).mockResolvedValue(null);
 
       const req = new NextRequest('http://localhost/api/products', {
@@ -105,16 +106,13 @@ describe('API Route: /api/products', () => {
 
       expect(response.status).toBe(401);
       expect(body.error).toMatch(/Não autorizado/);
-      expect(mockCreateProduct).not.toHaveBeenCalled(); // Garante que nada foi criado
+      expect(mockCreateProduct).not.toHaveBeenCalled(); 
     });
 
     it('✅ deve criar produto se autenticado, injetando o catalogId correto', async () => {
-      // 1. Preparação: Simular Utilizador Logado
       (getAuthenticatedUser as jest.Mock).mockResolvedValue({ email: 'admin@teste.com' });
-      // 2. Simular que este utilizador tem o catálogo "catalog_123_user_real"
       (getUserCatalogId as jest.Mock).mockResolvedValue(MOCK_CATALOG_ID);
       
-      // 3. Simular sucesso do serviço
       mockCreateProduct.mockResolvedValue(mockProduct);
 
       const req = new NextRequest('http://localhost/api/products', {
@@ -126,13 +124,11 @@ describe('API Route: /api/products', () => {
       const body = await response.json();
 
       expect(response.status).toBe(201);
-      expect(body).toEqual(mockProduct);
+      // ✅ CORREÇÃO: Normalização de datas aqui também
+      expect(body).toEqual(JSON.parse(JSON.stringify(mockProduct)));
 
-      // 4. VERIFICAÇÃO CRÍTICA DE SEGURANÇA:
-      // O serviço deve ter sido chamado com o catalogId que veio da BD (MOCK_CATALOG_ID),
-      // e não com qualquer coisa que viesse no request.
       expect(mockCreateProduct).toHaveBeenCalledWith(expect.objectContaining({
-        catalog: { connect: { id: MOCK_CATALOG_ID } }, // O nosso teste de "dono do dado"
+        catalog: { connect: { id: MOCK_CATALOG_ID } }, 
         name: 'Novo Copo'
       }));
     });

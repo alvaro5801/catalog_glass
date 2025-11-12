@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 // GET: Público (para a vitrine)
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest, // ✅ Renomeado para _request pois não é usado aqui
   context: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -29,7 +29,7 @@ export async function GET(
 
 // ✅ PUT PROTEGIDO
 export async function PUT(
-  request: NextRequest,
+  request: NextRequest, // Aqui usamos 'request' para ler o body
   context: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -60,7 +60,7 @@ export async function PUT(
 
 // ✅ DELETE PROTEGIDO
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest, // ✅ Renomeado para _request pois não é usado aqui
   context: { params: Promise<{ id: string }> }
 ) {
   try {

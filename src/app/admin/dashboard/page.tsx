@@ -11,23 +11,33 @@ import { CategoryRepository } from "@/domain/repositories/CategoryRepository";
 import { CategoryService } from "@/domain/services/CategoryService";
 import type { Product as PrismaProduct } from "@prisma/client";
 
-// ✅ --- CORREÇÃO ADICIONADA ---
-// Força esta página a ser dinâmica (SSR) e impede o 'build'
-// de tentar aceder à base de dados.
+// ✅ Importar os auxiliares de segurança
+import { getAuthenticatedUser, getUserCatalogId } from "@/lib/auth-helper";
+import { redirect } from "next/navigation";
+
 export const dynamic = 'force-dynamic';
-// --- FIM DA CORREÇÃO ---
 
 export default async function DashboardPage() {
+  // 1. Verificar Sessão
+  const user = await getAuthenticatedUser();
+  
+  // Se não houver user (embora o middleware proteja), redirecionar
+  if (!user || !user.email) {
+    redirect("/saas");
+  }
+
+  // 2. Obter o Catálogo REAL do utilizador
+  // (Isto cria um catálogo novo se for o primeiro login)
+  const catalogId = await getUserCatalogId(user.email);
   
   const productRepository = new ProductRepository();
   const productService = new ProductService(productRepository);
   const categoryRepository = new CategoryRepository();
   const categoryService = new CategoryService(categoryRepository);
 
-  const MOCK_CATALOG_ID = "clxrz8hax00003b6khe69046c";
-
-  const allProducts = await productService.getProducts(MOCK_CATALOG_ID);
-  const allCategories = await categoryService.getAllCategories(MOCK_CATALOG_ID);
+  // 3. Usar o ID real nas buscas
+  const allProducts = await productService.getProducts(catalogId);
+  const allCategories = await categoryService.getAllCategories(catalogId);
 
   const totalProducts = allProducts.length;
   const totalCategories = allCategories.length;
@@ -35,7 +45,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* (O resto do teu JSX continua igual...) */}
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-lg border bg-card p-6">
           <h3 className="text-sm font-medium text-muted-foreground">Total de Produtos</h3>
@@ -62,6 +71,10 @@ export default async function DashboardPage() {
       </div>
       <div className="rounded-lg border bg-card p-6">
         <h3 className="text-xl font-semibold mb-4">Produtos Adicionados Recentemente</h3>
+        {/* Feedback visual se não houver produtos */}
+        {recentProducts.length === 0 ? (
+            <p className="text-muted-foreground text-sm">Ainda não tem produtos. Comece por adicionar um!</p>
+        ) : (
         <Table>
           <TableHeader>
             <TableRow>
@@ -88,6 +101,7 @@ export default async function DashboardPage() {
             ))}
           </TableBody>
         </Table>
+        )}
       </div>
     </div>
   );
