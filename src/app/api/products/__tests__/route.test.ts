@@ -94,5 +94,40 @@ describe('API Route: /api/products', () => {
       const response = await POST(req);
       expect(response.status).toBe(401);
     });
+
+    // ✅ NOVO TESTE ADICIONADO AQUI
+    it('✅ deve gerar um slug automaticamente se não for enviado no body', async () => {
+      // Configuração
+      (getAuthenticatedUser as jest.Mock).mockResolvedValue({ email: 'admin@teste.com' });
+      (getUserCatalogId as jest.Mock).mockResolvedValue(MOCK_CATALOG_ID);
+      
+      // Mock da resposta do Prisma (simulamos que criou com sucesso e gerou um slug)
+      const generatedSlug = 'produto-sem-slug-abc12';
+      const mockCreatedProduct = { ...mockProduct, slug: generatedSlug };
+      (prisma.product.create as jest.Mock).mockResolvedValue(mockCreatedProduct);
+
+      // Requisição: Enviamos APENAS nome, preço e categoria (SEM SLUG)
+      const req = new NextRequest('http://localhost/api/products', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: 'Produto Sem Slug',
+          price: 10,
+          categoryId: 'cat_1'
+        }),
+      });
+
+      const response = await POST(req);
+      
+      expect(response.status).toBe(201);
+
+      // Verificação: O Backend deve ter gerado um slug e passado para o Prisma
+      // A regex /^produto-sem-slug-/ verifica se o slug começa com o nome do produto normalizado
+      expect(prisma.product.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({
+          name: 'Produto Sem Slug',
+          slug: expect.stringMatching(/^produto-sem-slug-/), 
+        })
+      }));
+    });
   });
 });
