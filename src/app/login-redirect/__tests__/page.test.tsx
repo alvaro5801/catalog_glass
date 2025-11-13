@@ -4,7 +4,6 @@ import { render, waitFor } from '@testing-library/react';
 import LoginRedirectPage from '../page';
 
 // 1. Simular o router do Next.js
-// Precisamos de controlar a função `push` para verificar se ela é chamada com o URL correto.
 const mockPush = jest.fn();
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -13,7 +12,6 @@ jest.mock('next/navigation', () => ({
 }));
 
 // 2. Simular o localStorage do browser
-// Os testes são executados num ambiente que não tem localStorage, por isso criamos uma simulação.
 let mockLocalStorage: { [key: string]: string } = {};
 
 Object.defineProperty(window, 'localStorage', {
@@ -29,10 +27,8 @@ Object.defineProperty(window, 'localStorage', {
   writable: true,
 });
 
-
 describe('LoginRedirectPage', () => {
 
-  // Limpa as simulações antes de cada teste para garantir que são independentes.
   beforeEach(() => {
     mockPush.mockClear();
     localStorage.clear();
@@ -42,23 +38,20 @@ describe('LoginRedirectPage', () => {
     // Cenário: localStorage está vazio ou 'onboardingComplete' é 'false'.
     render(<LoginRedirectPage />);
 
-    // Usamos 'waitFor' para esperar que o useEffect dentro do componente seja executado.
     await waitFor(() => {
-      // Verificamos se a função 'push' foi chamada com o URL do onboarding.
       expect(mockPush).toHaveBeenCalledWith('/onboarding');
     });
   });
 
-  it('deve redirecionar para / se o onboarding estiver completo', async () => {
-    // Cenário: Marcamos o onboarding como completo no nosso localStorage simulado.
+  it('deve redirecionar para /admin/dashboard se o onboarding estiver completo', async () => {
+    // Cenário: Marcamos o onboarding como completo
     localStorage.setItem('onboardingComplete', 'true');
 
     render(<LoginRedirectPage />);
 
     await waitFor(() => {
-      // Verificamos se a função 'push' foi chamada com o URL da página principal.
-      // A lógica atual redireciona para '/', o que está correto para o site público.
-      expect(mockPush).toHaveBeenCalledWith('/');
+      // ✅ CORREÇÃO: Agora esperamos que vá para o Painel Administrativo
+      expect(mockPush).toHaveBeenCalledWith('/admin/dashboard');
     });
   });
 });
