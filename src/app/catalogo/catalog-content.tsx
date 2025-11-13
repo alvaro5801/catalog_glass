@@ -13,21 +13,76 @@ import type {
   PriceTier,
 } from "@prisma/client";
 
+// Tipo auxiliar para a resposta da API e para as props
 type ProductFromApi = PrismaProduct & {
   specifications: Specification | null;
   priceTable: PriceTier[];
 };
 
-export function CatalogContent() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categoriesData, setCategoriesData] = useState<PrismaCategory[]>([]);
-  const [allCategories, setAllCategories] = useState<string[]>(["Todos"]);
+// ✅ NOVA INTERFACE DE PROPS
+interface CatalogContentProps {
+  products?: ProductFromApi[];      // Dados opcionais vindos do Server Component
+  categories?: PrismaCategory[];    // Dados opcionais vindos do Server Component
+}
+
+export function CatalogContent({ products: initialProducts, categories: initialCategories }: CatalogContentProps) {
+  
+  // Função auxiliar para formatar produtos (reutilizada tanto para props quanto para fetch)
+  const formatProducts = (rawProducts: ProductFromApi[], rawCategories: PrismaCategory[]): Product[] => {
+    return rawProducts.map((p) => {
+      const categoryName =
+        rawCategories.find((c) => c.id === p.categoryId)?.name || "N/A";
+
+      return {
+        id: p.id,
+        slug: p.slug,
+        name: p.name,
+        images: p.images,
+        shortDescription: p.shortDescription || "",
+        description: p.description || "",
+        category: categoryName,
+        specifications:
+          p.specifications ?? { material: "", capacidade: "", dimensoes: "" },
+        priceTable: p.priceTable,
+        priceInfo: p.priceInfo || "",
+        isFeatured: p.isFeatured,
+      };
+    });
+  };
+
+  // --- ESTADOS ---
+  
+  // Se recebermos dados via props (initialProducts), formatamos logo. Senão, iniciamos vazio.
+  const [products, setProducts] = useState<Product[]>(
+    initialProducts && initialCategories 
+      ? formatProducts(initialProducts, initialCategories) 
+      : []
+  );
+
+  const [categoriesData, setCategoriesData] = useState<PrismaCategory[]>(initialCategories || []);
+  
+  // Se recebermos categorias, extraímos os nomes. Senão, iniciamos com "Todos".
+  const [allCategories, setAllCategories] = useState<string[]>(
+    initialCategories 
+      ? ["Todos", ...initialCategories.map((c) => c.name)] 
+      : ["Todos"]
+  );
+
   const [activeCategory, setActiveCategory] = useState("Todos");
-  const [isLoading, setIsLoading] = useState(true);
+  
+  // Se já tivermos dados iniciais, não estamos a carregar
+  const [isLoading, setIsLoading] = useState(!initialProducts);
+  
   const searchParams = useSearchParams();
 
-  // 🟢 Carrega dados iniciais
+  // 🟢 1. EFEITO: Carregar dados APENAS se não vieram via props
   useEffect(() => {
+    // Se já temos dados iniciais (props), não fazemos fetch
+    if (initialProducts && initialCategories) {
+        setIsLoading(false);
+        return;
+    }
+
     const fetchData = async () => {
       setIsLoading(true);
       try {
@@ -43,27 +98,7 @@ export function CatalogContent() {
         const productsData: ProductFromApi[] = await productsRes.json();
         const categoriesData: PrismaCategory[] = await categoriesRes.json();
 
-        // 🔧 Mapeia produtos com nome da categoria (não ID)
-        const formattedProducts = productsData.map((p) => {
-          const categoryName =
-            categoriesData.find((c) => c.id === p.categoryId)?.name || "N/A";
-
-          return {
-            id: p.id,
-            slug: p.slug,
-            name: p.name,
-            images: p.images,
-            shortDescription: p.shortDescription || "",
-            description: p.description || "",
-            category: categoryName,
-            specifications:
-              p.specifications ?? { material: "", capacidade: "", dimensoes: "" },
-            priceTable: p.priceTable,
-            priceInfo: p.priceInfo || "",
-            isFeatured: p.isFeatured,
-          };
-        });
-
+        const formattedProducts = formatProducts(productsData, categoriesData);
         const categoryNames = categoriesData.map((c) => c.name);
 
         setProducts(formattedProducts);
@@ -77,35 +112,37 @@ export function CatalogContent() {
     };
 
     fetchData();
-  }, []);
+  }, [initialProducts, initialCategories]);
 
-  // 🟢 Sincroniza categoria ativa com o parâmetro da URL (?categoria=)
+  // 🟢 2. EFEITO: Sincronizar categoria ativa com o parâmetro da URL (?categoria=)
   useEffect(() => {
-    const categoryIdFromURL = searchParams.get("categoria");
-    if (categoryIdFromURL && categoriesData.length > 0) {
-      const categoryName = categoriesData.find(
-        (c) => c.id === categoryIdFromURL
-      )?.name;
-      if (categoryName && allCategories.includes(categoryName)) {
-        setActiveCategory(categoryName);
+    const categoryParam = searchParams.get("categoria");
+    if (categoryParam && categoriesData.length > 0) {
+      // Tenta encontrar por ID ou por Nome (case insensitive para URLs mais amigáveis)
+      const categoryObj = categoriesData.find(
+        (c) => c.id === categoryParam || c.name.toLowerCase() === categoryParam.toLowerCase()
+      );
+      
+      if (categoryObj && allCategories.includes(categoryObj.name)) {
+        setActiveCategory(categoryObj.name);
       }
     }
   }, [searchParams, categoriesData, allCategories]);
 
-  // 🟢 Filtragem reativa por categoria
+  // 🟢 3. MEMO: Filtragem reativa por categoria
   const filteredProducts = useMemo(() => {
     if (activeCategory === "Todos") return products;
     return products.filter((p) => p.category === activeCategory);
   }, [activeCategory, products]);
 
-  // 🔁 Reforça atualização da lista após mudar categoria (útil em testes e SSR)
+  // 🔁 Reforça atualização da lista após mudar categoria
   useEffect(() => {
     // Apenas força re-render visual
   }, [activeCategory]);
 
   if (isLoading) {
     return (
-      <p className="text-center text-muted-foreground animate-pulse">
+      <p className="text-center text-muted-foreground animate-pulse mt-10">
         A carregar catálogo...
       </p>
     );
@@ -132,7 +169,7 @@ export function CatalogContent() {
             <ProductCard key={product.id} product={product} />
           ))
         ) : (
-          <p className="col-span-3 text-center text-muted-foreground">
+          <p className="col-span-3 text-center text-muted-foreground py-10">
             Nenhum produto encontrado nesta categoria.
           </p>
         )}

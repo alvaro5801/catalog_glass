@@ -96,15 +96,18 @@ model VerificationToken {
 // --- OS TEUS MODELOS (Com Timestamps adicionados) ---
 
 model Catalog {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  products  Product[]
-  categories Category[]
+  id         String   @id @default(cuid())
   
-  // ✅ ADICIONADO: Para saber quando foi criado/atualizado
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  
+  slug       String  @unique 
+  
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  products   Product[]
+  categories Category[]
+   
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Category {
@@ -130,13 +133,13 @@ model Product {
   images           String[]
   priceInfo        String
   isFeatured       Boolean  @default(false)
-  
+   
   categoryId       String
   category         Category @relation(fields: [categoryId], references: [id])
-  
+   
   catalogId        String
   catalog          Catalog  @relation(fields: [catalogId], references: [id])
-  
+   
   specifications   Specification?
   priceTable       PriceTier[]
 

@@ -1,48 +1,35 @@
 // src/app/api/categories/__tests__/route.test.ts
 import { GET, POST } from '../route';
 import { NextRequest } from 'next/server';
-import type { Category } from '@prisma/client';
+import { prisma } from '@/lib/prisma'; // Importamos o prisma real para o mockar
+import { getAuthenticatedUser, getUserCatalogId } from '@/lib/auth-helper';
 
-// --- 1. MOCKS DOS SERVIÇOS ---
-jest.mock('@/domain/services/CategoryService', () => {
-  const mockGetAllCategories = jest.fn();
-  const mockAddNewCategory = jest.fn();
+// --- 1. MOCKS ---
 
-  return {
-    CategoryService: jest.fn().mockImplementation(() => {
-      return {
-        getAllCategories: mockGetAllCategories,
-        addNewCategory: mockAddNewCategory,
-      };
-    }),
-    __mocks__: { mockGetAllCategories, mockAddNewCategory },
-  };
-});
+// Mock do Prisma (Simular a base de dados)
+jest.mock('@/lib/prisma', () => ({
+  prisma: {
+    category: {
+      findMany: jest.fn(),
+      create: jest.fn(),
+      findUnique: jest.fn(), // Necessário para a verificação de duplicados
+    },
+  },
+}));
 
-// Mockar o CategoryRepository
-jest.mock('@/domain/repositories/CategoryRepository', () => {
-  return {
-    CategoryRepository: jest.fn().mockImplementation(() => {}),
-  };
-});
-
-// ✅ Mockar o Auth Helper para simular login e catálogo
+// Mock do Auth Helper
 jest.mock('@/lib/auth-helper', () => ({
   getAuthenticatedUser: jest.fn(),
   getUserCatalogId: jest.fn(),
 }));
 
-// --- 2. REFERÊNCIAS AOS MOCKS ---
-const { __mocks__ } = jest.requireMock('@/domain/services/CategoryService');
-const { mockGetAllCategories, mockAddNewCategory } = __mocks__;
-// Importar as funções mockadas do auth-helper
-import { getAuthenticatedUser, getUserCatalogId } from '@/lib/auth-helper';
-
-// --- 3. DADOS DE TESTE ---
+// --- 2. DADOS DE TESTE ---
 const MOCK_USER_CATALOG_ID = 'catalog_user_secure_123';
+// Usamos toISOString() para garantir que o formato bate certo com o JSON serializado
 const fixedDate = new Date('2024-01-01T00:00:00Z');
+const fixedDateString = fixedDate.toISOString(); 
 
-const mockCategories: Category[] = [
+const mockCategories = [
   { 
     id: 'cat_1', 
     name: 'Copos', 
@@ -61,63 +48,66 @@ const mockCategories: Category[] = [
 
 describe('API Route: /api/categories', () => {
 
-  // Limpar os mocks antes de cada teste
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  // --- Testes para a função GET ---
+  // --- Testes GET ---
   describe('GET', () => {
     it('deve retornar a lista de categorias do utilizador logado (200)', async () => {
-      // 1. Simular Utilizador Logado
+      // Preparação
       (getAuthenticatedUser as jest.Mock).mockResolvedValue({ email: 'teste@admin.com' });
       (getUserCatalogId as jest.Mock).mockResolvedValue(MOCK_USER_CATALOG_ID);
-
-      // 2. Simular resposta do serviço
-      mockGetAllCategories.mockResolvedValue(mockCategories);
+      
+      // O Prisma deve retornar os dados mockados
+      (prisma.category.findMany as jest.Mock).mockResolvedValue(mockCategories);
 
       // Execução
       const response = await GET();
-      // Nota: O JSON.stringify converte Datas para strings, precisamos normalizar isso no teste real se falhar,
-      // mas como estamos a mockar o retorno direto, o Jest costuma aceitar.
       const body = await response.json();
 
       // Verificação
       expect(response.status).toBe(200);
-      // Convertemos as datas para string para comparar com o JSON retornado
-      expect(body).toEqual(JSON.parse(JSON.stringify(mockCategories)));
       
-      // ✅ Verifica se buscou o ID correto do utilizador
+      // Precisamos comparar com as datas em string, pois o JSON serializa
+      const expectedBody = mockCategories.map(c => ({
+          ...c,
+          createdAt: fixedDateString,
+          updatedAt: fixedDateString
+      }));
+      
+      expect(body).toEqual(expectedBody);
       expect(getUserCatalogId).toHaveBeenCalledWith('teste@admin.com');
-      expect(mockGetAllCategories).toHaveBeenCalledWith(MOCK_USER_CATALOG_ID);
+      expect(prisma.category.findMany).toHaveBeenCalledWith({
+        where: { catalogId: MOCK_USER_CATALOG_ID },
+        orderBy: { name: 'asc' },
+      });
     });
 
-    it('deve retornar um erro 500 se o serviço falhar', async () => {
-      // Simular login 
+    it('deve retornar um erro 500 se o Prisma falhar', async () => {
       (getAuthenticatedUser as jest.Mock).mockResolvedValue({ email: 'teste@admin.com' });
       (getUserCatalogId as jest.Mock).mockResolvedValue(MOCK_USER_CATALOG_ID);
       
-      // Simular erro
-      mockGetAllCategories.mockRejectedValue(new Error('Erro de base de dados'));
+      // Simular erro no banco
+      (prisma.category.findMany as jest.Mock).mockRejectedValue(new Error('DB Error'));
 
       const response = await GET();
       const body = await response.json();
 
       expect(response.status).toBe(500);
-      expect(body.error).toBe("Erro ao buscar categorias.");
+      expect(body.error).toMatch(/Erro interno/);
     });
   });
 
-  // --- Testes para a função POST ---
+  // --- Testes POST ---
   describe('POST', () => {
     
     it('🚫 deve retornar 401 se o utilizador NÃO estiver logado', async () => {
-      // Simular sem sessão
       (getAuthenticatedUser as jest.Mock).mockResolvedValue(null);
 
       const request = new NextRequest('http://localhost/api/categories', {
         method: 'POST',
-        body: JSON.stringify({ name: 'Nova Categoria' }),
+        body: JSON.stringify({ name: 'Nova' }),
       });
 
       const response = await POST(request);
@@ -125,63 +115,86 @@ describe('API Route: /api/categories', () => {
 
       expect(response.status).toBe(401);
       expect(body.error).toMatch(/Não autorizado/);
-      expect(mockAddNewCategory).not.toHaveBeenCalled(); // Nada criado
+      expect(prisma.category.create).not.toHaveBeenCalled();
     });
 
     it('✅ deve criar uma nova categoria para o catálogo do utilizador (201)', async () => {
-      const newCategory: Category = { 
+      const newCategory = { 
         id: 'cat_3', 
         name: 'Canecas', 
         catalogId: MOCK_USER_CATALOG_ID,
         createdAt: fixedDate,
         updatedAt: fixedDate
       };
-      const requestBody = { name: 'Canecas' };
 
-      // Preparação:
-      // 1. Autenticação Mockada
+      // Preparação
       (getAuthenticatedUser as jest.Mock).mockResolvedValue({ email: 'teste@admin.com' });
       (getUserCatalogId as jest.Mock).mockResolvedValue(MOCK_USER_CATALOG_ID);
-
-      // 2. Serviço Mockado
-      mockAddNewCategory.mockResolvedValue(newCategory);
+      
+      // IMPORTANTE: Mockar que NÃO existe duplicado (retorna null)
+      (prisma.category.findUnique as jest.Mock).mockResolvedValue(null);
+      
+      // Mockar a criação
+      (prisma.category.create as jest.Mock).mockResolvedValue(newCategory);
 
       const request = new NextRequest('http://localhost/api/categories', {
         method: 'POST',
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({ name: 'Canecas' }),
       });
 
-      // Execução
       const response = await POST(request);
       const body = await response.json();
 
-      // Verificação
       expect(response.status).toBe(201);
-      expect(body).toEqual(JSON.parse(JSON.stringify(newCategory)));
+      expect(body).toEqual({
+          ...newCategory,
+          createdAt: fixedDateString,
+          updatedAt: fixedDateString
+      });
       
-      // ✅ CRÍTICO: Verificar se criou no catálogo do utilizador
-      expect(mockAddNewCategory).toHaveBeenCalledWith('Canecas', MOCK_USER_CATALOG_ID);
+      // Verificar se passou o ID correto do catálogo
+      expect(prisma.category.create).toHaveBeenCalledWith({
+        data: {
+            name: 'Canecas',
+            catalogId: MOCK_USER_CATALOG_ID
+        }
+      });
     });
 
-    it('deve retornar 400 se a validação do serviço falhar (ex: nome curto)', async () => {
-      const requestBody = { name: 'A' };
-
-      // Preparação:
+    it('deve retornar 400 se o nome for muito curto', async () => {
       (getAuthenticatedUser as jest.Mock).mockResolvedValue({ email: 'teste@admin.com' });
-      (getUserCatalogId as jest.Mock).mockResolvedValue(MOCK_USER_CATALOG_ID);
       
-      mockAddNewCategory.mockRejectedValue(new Error("O nome da categoria deve ter pelo menos 2 caracteres."));
-
       const request = new NextRequest('http://localhost/api/categories', {
         method: 'POST',
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({ name: 'A' }),
       });
 
       const response = await POST(request);
       const body = await response.json();
 
-      expect(response.status).toBe(400); 
-      expect(body.error).toBe("O nome da categoria deve ter pelo menos 2 caracteres.");
+      expect(response.status).toBe(400);
+      // ✅ Correção: Texto exato da nova API
+      expect(body.error).toBe("O nome deve ter pelo menos 2 caracteres.");
+    });
+
+    it('deve retornar 409 se a categoria já existir (Duplicado)', async () => {
+        (getAuthenticatedUser as jest.Mock).mockResolvedValue({ email: 'teste@admin.com' });
+        (getUserCatalogId as jest.Mock).mockResolvedValue(MOCK_USER_CATALOG_ID);
+
+        // Simular que JÁ EXISTE uma categoria
+        (prisma.category.findUnique as jest.Mock).mockResolvedValue({ id: 'existing_1' });
+
+        const request = new NextRequest('http://localhost/api/categories', {
+            method: 'POST',
+            body: JSON.stringify({ name: 'Duplicada' }),
+        });
+
+        const response = await POST(request);
+        const body = await response.json();
+
+        expect(response.status).toBe(409);
+        expect(body.error).toMatch(/já existe/);
+        expect(prisma.category.create).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,30 +1,34 @@
 // src/app/admin/products/__tests__/page.test.tsx
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import ProductsPage from '@/app/admin/products/page';
-// Importar os tipos que o componente realmente usa
 import type { Product as PrismaProduct, Category as PrismaCategory, Specification, PriceTier } from "@prisma/client";
+import { upload } from '@vercel/blob/client';
 
-// --- Tipos de Mock ---
+// --- MOCKS ---
+jest.mock('@vercel/blob/client', () => ({
+  upload: jest.fn(),
+}));
+
+// Tipos auxiliares
 type Category = Pick<PrismaCategory, 'id' | 'name'>;
-
 type ProductWithRelations = PrismaProduct & {
     specifications: Specification | null;
     priceTable: PriceTier[];
     category: Category | null;
 };
 
-// --- Mocks Globais ---
+// Mock Global do Fetch e Confirm
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 global.confirm = jest.fn(() => true); 
 
-// Adicionamos esta simulação para a função 'scrollIntoView' que o Radix Select usa.
 if (typeof window !== 'undefined' && window.HTMLElement) {
   window.HTMLElement.prototype.scrollIntoView = jest.fn();
 }
 
-// Os mocks de dados (mockCategories e mockProducts) continuam iguais
+// --- DADOS DE TESTE ---
+const fixedDate = new Date();
 const mockCategories: Category[] = [
     { id: 'cat_1', name: 'Copos' },
     { id: 'cat_2', name: 'Taças' },
@@ -41,22 +45,27 @@ const mockProducts: ProductWithRelations[] = [
         priceInfo: '...',
         isFeatured: false,
         catalogId: 'catalog_123',
-        categoryId: "cat_1", // O ID da categoria
+        categoryId: "cat_1",
         specifications: null,
-        priceTable: [ // A tabela de preços
+        priceTable: [
             { id: 'p1', quantity: '10-29', price: 4.50, productId: 'prod_1' },
             { id: 'p2', quantity: '30-49', price: 4.20, productId: 'prod_1' },
             { id: 'p3', quantity: '100+', price: 3.50, productId: 'prod_1' },
         ],
-        category: { id: 'cat_1', name: 'Copos' } // O objeto da categoria
+        category: { id: 'cat_1', name: 'Copos' },
+        createdAt: fixedDate,
+        updatedAt: fixedDate
     },
 ];
 
 describe('ProductsPage - Gestão de Produtos', () => {
 
   beforeEach(() => {
-    mockFetch.mockClear();
+    // ✅ CRÍTICO: mockReset() limpa todas as respostas configuradas anteriormente.
+    // Isso evita que "lixo" de um teste afete o outro (o erro do map is not a function).
+    mockFetch.mockReset();
     (global.confirm as jest.Mock).mockClear();
+    (upload as jest.Mock).mockClear();
   });
 
   it('deve carregar e exibir os produtos e categorias iniciais', async () => {
@@ -66,48 +75,47 @@ describe('ProductsPage - Gestão de Produtos', () => {
 
     render(<ProductsPage />);
 
+    // Espera o loading desaparecer
     await waitFor(() => {
         expect(screen.queryByText(/A carregar dados do catálogo.../i)).not.toBeInTheDocument();
     });
 
-    // Verificar os dados processados pelo componente
     expect(screen.getByText("Copo Long Drink")).toBeInTheDocument();
     expect(screen.getByText("Copos")).toBeInTheDocument();
-    
-    // ESTE TESTE AGORA DEVE PASSAR (graças à correção no page.tsx)
     expect(screen.getByText("R$ 3.50")).toBeInTheDocument();
   });
 
-  it('deve permitir adicionar um novo produto', async () => {
+  it('deve permitir adicionar um novo produto (fluxo básico sem upload)', async () => {
     mockFetch
         .mockResolvedValueOnce({ ok: true, json: async () => mockProducts })
         .mockResolvedValueOnce({ ok: true, json: async () => mockCategories });
 
     render(<ProductsPage />);
-    await screen.findByText("Copo Long Drink");
+    
+    // ✅ CORREÇÃO: Esperar que o botão apareça (fim do loading) antes de clicar
+    await waitFor(() => {
+        expect(screen.queryByText(/A carregar dados/i)).not.toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByRole('button', { name: /Adicionar Produto/i }));
+    
+    // Agora o modal deve estar visível
     await screen.findByText("Adicionar Novo Produto");
 
     // Preencher o formulário
     fireEvent.change(screen.getByLabelText(/Nome do Produto/i), { target: { value: 'Caneca Nova' } });
     fireEvent.change(screen.getByLabelText(/Preço \(Inicial\)/i), { target: { value: '15.99' } });
     
-    // Clicar no <SelectTrigger> para abrir as opções
     fireEvent.click(screen.getByRole('combobox'));
-    
-    // Usamos 'findByRole' com 'option' que é mais específico para
-    // itens de uma lista Radix, evitando a ambiguidade.
     fireEvent.click(await screen.findByRole('option', { name: 'Taças' }));
 
-    // Simular a resposta da API (POST)
+    // Mock da resposta do POST
     const newProduct: ProductWithRelations = {
         id: 'prod_2', 
         name: 'Caneca Nova', 
-        categoryId: 'cat_2', // Categoria "Taças"
-        images: ['/images/placeholder.png'],
+        categoryId: 'cat_2', 
+        images: ['/images/placeholder.png'], 
         priceTable: [{ id: 'p4', quantity: '1-10', price: 15.99, productId: 'prod_2' }],
-        // ...outros campos obrigatórios do tipo PrismaProduct...
         slug: 'caneca-nova', 
         shortDescription: '...', 
         description: '...', 
@@ -115,8 +123,11 @@ describe('ProductsPage - Gestão de Produtos', () => {
         isFeatured: false, 
         catalogId: 'catalog_123', 
         specifications: null,
-        category: { id: 'cat_2', name: 'Taças' }
+        category: { id: 'cat_2', name: 'Taças' },
+        createdAt: fixedDate,
+        updatedAt: fixedDate
     };
+
     mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => newProduct,
@@ -124,30 +135,103 @@ describe('ProductsPage - Gestão de Produtos', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Salvar/i }));
     
-    // 1. Esperamos o nome "Caneca Nova" aparecer
     const newProductCell = await screen.findByText('Caneca Nova');
-    
-    // 2. Encontramos a linha (tr) mais próxima desse nome
     const newRow = newProductCell.closest('tr');
     
-    // 3. Verificamos se os outros dados estão DENTRO (within) dessa linha
     expect(within(newRow!).getByAltText('Caneca Nova')).toBeInTheDocument();
     expect(within(newRow!).getByText('Taças')).toBeInTheDocument();
     expect(within(newRow!).getByText('R$ 15.99')).toBeInTheDocument();
   });
 
+  it('deve fazer upload da imagem e salvar o produto com o URL retornado', async () => {
+    // 1. Configuração dos Mocks Iniciais
+    mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => mockProducts })
+        .mockResolvedValueOnce({ ok: true, json: async () => mockCategories });
+
+    const fakeImageUrl = 'https://minha-imagem-na-nuvem.com/foto.jpg';
+    (upload as jest.Mock).mockResolvedValue({
+      url: fakeImageUrl,
+    });
+
+    // Mock da resposta final (POST)
+    const productWithImage: ProductWithRelations = { 
+        id: 'prod_novo', 
+        name: 'Produto Com Foto', 
+        slug: 'produto-com-foto',
+        shortDescription: '...',
+        description: '...',
+        priceInfo: '...',
+        isFeatured: false,
+        catalogId: 'cat_123',
+        specifications: null,
+        createdAt: fixedDate,
+        updatedAt: fixedDate,
+        images: [fakeImageUrl], 
+        categoryId: 'cat_1',
+        priceTable: [{ id: 'p_img', quantity: '1', price: 20, productId: 'prod_novo' }],
+        category: { id: 'cat_1', name: 'Copos' }
+    };
+
+    // Configura a resposta do POST que acontecerá no final
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => productWithImage,
+    });
+
+    render(<ProductsPage />);
+    
+    // ✅ CORREÇÃO: Esperar o loading terminar!
+    await waitFor(() => {
+        expect(screen.queryByText(/A carregar dados/i)).not.toBeInTheDocument();
+    });
+    
+    // Agora é seguro clicar
+    fireEvent.click(screen.getByRole('button', { name: /Adicionar Produto/i }));
+    
+    fireEvent.change(screen.getByLabelText(/Nome do Produto/i), { target: { value: 'Produto Com Foto' } });
+    fireEvent.change(screen.getByLabelText(/Preço/i), { target: { value: '20' } });
+    
+    fireEvent.click(screen.getByRole('combobox'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Copos' }));
+
+    // --- SIMULAR UPLOAD ---
+    const file = new File(['(conteúdo binário)'], 'foto.png', { type: 'image/png' });
+    const input = screen.getByLabelText(/Imagem do Produto/i); 
+
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [file] } });
+    });
+
+    expect(upload).toHaveBeenCalled();
+
+    // --- SALVAR ---
+    fireEvent.click(screen.getByRole('button', { name: /Salvar/i }));
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/products',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining(fakeImageUrl), 
+      })
+    );
+  });
+
   it('deve permitir apagar um produto', async () => {
+    // Setup Inicial
     mockFetch
         .mockResolvedValueOnce({ ok: true, json: async () => mockProducts })
         .mockResolvedValueOnce({ ok: true, json: async () => mockCategories });
 
     render(<ProductsPage />);
-    const productRow = await screen.findByText("Copo Long Drink");
+    
+    // ✅ CORREÇÃO: findByText já espera implicitamente, mas garante que o mockFetch inicial foi consumido
+    const productRowText = await screen.findByText("Copo Long Drink");
 
-    // Simular a API de DELETE (não precisa retornar nada, só 'ok')
+    // Mock da resposta do DELETE
     mockFetch.mockResolvedValueOnce({ ok: true });
 
-    const row = productRow.closest('tr')!;
+    const row = productRowText.closest('tr')!;
     const deleteButton = within(row).getByRole('button', { name: /apagar/i });
     fireEvent.click(deleteButton);
 
