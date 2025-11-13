@@ -30,6 +30,7 @@ export async function GET() {
 // POST: Criar produto
 export async function POST(request: Request) {
   try {
+    // 1. Autenticação
     const user = await getAuthenticatedUser();
     if (!user || !user.email) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
@@ -37,20 +38,21 @@ export async function POST(request: Request) {
 
     const body = await request.json();
 
-    // Validação básica
+    // 2. Validação
     if (!body.name || !body.price || !body.categoryId) {
       return NextResponse.json({ error: "Campos obrigatórios em falta" }, { status: 400 });
     }
 
     const catalogId = await getUserCatalogId(user.email);
 
-    // Gerar slug se não vier no body (para garantir unicidade)
+    // 3. Slug: Gera automaticamente se não vier no body
     let productSlug = body.slug;
     if (!productSlug) {
       const baseSlug = body.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
       productSlug = `${baseSlug}-${Math.random().toString(36).substring(2, 7)}`;
     }
 
+    // 4. Criação
     const product = await prisma.product.create({
       data: {
         name: body.name,
@@ -62,12 +64,19 @@ export async function POST(request: Request) {
         images: body.images || [],
         catalogId: catalogId,
         categoryId: body.categoryId,
+        
+        // Tabelas relacionadas
         priceTable: { create: [{ quantity: "1", price: Number(body.price) }] },
-        specifications: { create: body.specifications || { material: "N/A", capacidade: "N/A", dimensoes: "N/A" } }
+        specifications: { 
+            create: body.specifications || { 
+                material: "N/A", 
+                capacidade: "N/A", 
+                dimensoes: "N/A" 
+            } 
+        }
       },
-      // ✅ CORREÇÃO CRÍTICA:
-      // O 'include' garante que a resposta traz as relações necessárias (category, priceTable, etc.)
-      // Isso impede que o frontend quebre ao tentar ler 'product.priceTable' logo após criar.
+      // ✅ O 'include' garante que a resposta traz as relações necessárias
+      // impedindo o erro no frontend ao atualizar a lista.
       include: {
         category: true,
         priceTable: true,
@@ -75,7 +84,7 @@ export async function POST(request: Request) {
       }
     });
 
-    // Retorna 201 Created
+    // 5. Resposta 201 (Created)
     return new NextResponse(JSON.stringify(product), {
       status: 201,
       headers: { "Content-Type": "application/json" },

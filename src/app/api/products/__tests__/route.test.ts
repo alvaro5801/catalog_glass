@@ -3,7 +3,7 @@
 // Mock do setImmediate para ambientes que precisam dele
 global.setImmediate = jest.fn() as unknown as typeof setImmediate;
 
-import { GET, POST } from '../route'; // Importa as funções do passo 1
+import { GET, POST } from '../route';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma'; 
 import { getAuthenticatedUser, getUserCatalogId } from '@/lib/auth-helper';
@@ -33,6 +33,12 @@ const mockProduct = {
   updatedAt: new Date(),
 };
 
+const requestBody = {
+  name: 'Novo Copo',
+  price: 10, 
+  categoryId: 'cat_1',
+};
+
 describe('API Route: /api/products', () => {
 
   beforeEach(() => {
@@ -41,46 +47,47 @@ describe('API Route: /api/products', () => {
 
   describe('GET', () => {
     it('deve retornar 200 e a lista de produtos', async () => {
-      // Configurar mocks
       (getAuthenticatedUser as jest.Mock).mockResolvedValue({ email: 'admin@teste.com' });
       (getUserCatalogId as jest.Mock).mockResolvedValue(MOCK_CATALOG_ID);
       (prisma.product.findMany as jest.Mock).mockResolvedValue([mockProduct]);
 
-      // Executar
       const response = await GET();
       const body = await response.json();
 
-      // Verificar
       expect(response.status).toBe(200);
-      // JSON.parse(JSON.stringify(...)) ajuda a ignorar diferenças de formato de Data
       expect(body).toEqual(JSON.parse(JSON.stringify([mockProduct])));
     });
   });
 
   describe('POST', () => {
-    it('deve retornar 201 ao criar produto com sucesso', async () => {
-      // Configurar mocks
+    it('✅ deve criar produto se autenticado, injetando o catalogId correto', async () => {
       (getAuthenticatedUser as jest.Mock).mockResolvedValue({ email: 'admin@teste.com' });
       (getUserCatalogId as jest.Mock).mockResolvedValue(MOCK_CATALOG_ID);
       (prisma.product.create as jest.Mock).mockResolvedValue(mockProduct);
 
-      // Criar requisição falsa
       const req = new NextRequest('http://localhost/api/products', {
         method: 'POST',
-        body: JSON.stringify({
-          name: 'Copo Teste',
-          price: 10,
-          categoryId: 'cat_1'
-        }),
+        body: JSON.stringify(requestBody),
       });
 
-      // Executar
       const response = await POST(req);
       const body = await response.json();
 
-      // Verificar
       expect(response.status).toBe(201);
       expect(body).toEqual(JSON.parse(JSON.stringify(mockProduct)));
+
+      // ✅ VERIFICAÇÃO REFORÇADA: Garantimos que o 'include' foi enviado
+      expect(prisma.product.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({
+          name: 'Novo Copo',
+          catalogId: MOCK_CATALOG_ID 
+        }),
+        include: {
+            category: true,
+            priceTable: true,
+            specifications: true,
+        }
+      }));
     });
 
     it('deve retornar 401 se não estiver logado', async () => {
@@ -95,18 +102,14 @@ describe('API Route: /api/products', () => {
       expect(response.status).toBe(401);
     });
 
-    // ✅ NOVO TESTE ADICIONADO AQUI
     it('✅ deve gerar um slug automaticamente se não for enviado no body', async () => {
-      // Configuração
       (getAuthenticatedUser as jest.Mock).mockResolvedValue({ email: 'admin@teste.com' });
       (getUserCatalogId as jest.Mock).mockResolvedValue(MOCK_CATALOG_ID);
       
-      // Mock da resposta do Prisma (simulamos que criou com sucesso e gerou um slug)
       const generatedSlug = 'produto-sem-slug-abc12';
       const mockCreatedProduct = { ...mockProduct, slug: generatedSlug };
       (prisma.product.create as jest.Mock).mockResolvedValue(mockCreatedProduct);
 
-      // Requisição: Enviamos APENAS nome, preço e categoria (SEM SLUG)
       const req = new NextRequest('http://localhost/api/products', {
         method: 'POST',
         body: JSON.stringify({
@@ -120,13 +123,17 @@ describe('API Route: /api/products', () => {
       
       expect(response.status).toBe(201);
 
-      // Verificação: O Backend deve ter gerado um slug e passado para o Prisma
-      // A regex /^produto-sem-slug-/ verifica se o slug começa com o nome do produto normalizado
+      // Verifica se o slug foi gerado e se o include também foi passado aqui
       expect(prisma.product.create).toHaveBeenCalledWith(expect.objectContaining({
         data: expect.objectContaining({
           name: 'Produto Sem Slug',
           slug: expect.stringMatching(/^produto-sem-slug-/), 
-        })
+        }),
+        include: {
+            category: true,
+            priceTable: true,
+            specifications: true,
+        }
       }));
     });
   });
