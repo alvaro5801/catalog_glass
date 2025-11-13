@@ -6,11 +6,12 @@ import type { Product as PrismaProduct, Category as PrismaCategory, Specificatio
 import { upload } from '@vercel/blob/client';
 
 // --- MOCKS ---
+// Mock do Vercel Blob para evitar uploads reais
 jest.mock('@vercel/blob/client', () => ({
   upload: jest.fn(),
 }));
 
-// Tipos auxiliares
+// Tipos auxiliares para os mocks
 type Category = Pick<PrismaCategory, 'id' | 'name'>;
 type ProductWithRelations = PrismaProduct & {
     specifications: Specification | null;
@@ -23,6 +24,7 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 global.confirm = jest.fn(() => true); 
 
+// Mock do scrollIntoView (necessário para componentes Radix UI como o Select)
 if (typeof window !== 'undefined' && window.HTMLElement) {
   window.HTMLElement.prototype.scrollIntoView = jest.fn();
 }
@@ -61,14 +63,15 @@ const mockProducts: ProductWithRelations[] = [
 describe('ProductsPage - Gestão de Produtos', () => {
 
   beforeEach(() => {
-    // ✅ CRÍTICO: mockReset() limpa todas as respostas configuradas anteriormente.
-    // Isso evita que "lixo" de um teste afete o outro (o erro do map is not a function).
+    // ✅ LIMPEZA CRÍTICA: mockReset() limpa todas as respostas configuradas anteriormente.
+    // Isso evita que o "lixo" de um teste afete o outro (erro 'products.map is not a function').
     mockFetch.mockReset();
     (global.confirm as jest.Mock).mockClear();
     (upload as jest.Mock).mockClear();
   });
 
   it('deve carregar e exibir os produtos e categorias iniciais', async () => {
+    // Configurar respostas do GET inicial
     mockFetch
       .mockResolvedValueOnce({ ok: true, json: async () => mockProducts })
       .mockResolvedValueOnce({ ok: true, json: async () => mockCategories });
@@ -80,36 +83,38 @@ describe('ProductsPage - Gestão de Produtos', () => {
         expect(screen.queryByText(/A carregar dados do catálogo.../i)).not.toBeInTheDocument();
     });
 
+    // Verifica se os dados apareceram na tabela
     expect(screen.getByText("Copo Long Drink")).toBeInTheDocument();
     expect(screen.getByText("Copos")).toBeInTheDocument();
     expect(screen.getByText("R$ 3.50")).toBeInTheDocument();
   });
 
   it('deve permitir adicionar um novo produto (fluxo básico sem upload)', async () => {
+    // 1. Configuração do GET inicial
     mockFetch
         .mockResolvedValueOnce({ ok: true, json: async () => mockProducts })
         .mockResolvedValueOnce({ ok: true, json: async () => mockCategories });
 
     render(<ProductsPage />);
     
-    // ✅ CORREÇÃO: Esperar que o botão apareça (fim do loading) antes de clicar
+    // Esperar que o botão apareça (fim do loading) antes de clicar
     await waitFor(() => {
         expect(screen.queryByText(/A carregar dados/i)).not.toBeInTheDocument();
     });
 
+    // Abrir modal
     fireEvent.click(screen.getByRole('button', { name: /Adicionar Produto/i }));
-    
-    // Agora o modal deve estar visível
     await screen.findByText("Adicionar Novo Produto");
 
     // Preencher o formulário
     fireEvent.change(screen.getByLabelText(/Nome do Produto/i), { target: { value: 'Caneca Nova' } });
     fireEvent.change(screen.getByLabelText(/Preço \(Inicial\)/i), { target: { value: '15.99' } });
     
+    // Selecionar Categoria (Simulação do Select do Radix UI)
     fireEvent.click(screen.getByRole('combobox'));
     fireEvent.click(await screen.findByRole('option', { name: 'Taças' }));
 
-    // Mock da resposta do POST
+    // 2. Configurar a resposta do POST (Criação)
     const newProduct: ProductWithRelations = {
         id: 'prod_2', 
         name: 'Caneca Nova', 
@@ -133,8 +138,10 @@ describe('ProductsPage - Gestão de Produtos', () => {
         json: async () => newProduct,
     });
 
+    // Salvar
     fireEvent.click(screen.getByRole('button', { name: /Salvar/i }));
     
+    // Verificar se o novo produto aparece na tabela
     const newProductCell = await screen.findByText('Caneca Nova');
     const newRow = newProductCell.closest('tr');
     
@@ -144,17 +151,18 @@ describe('ProductsPage - Gestão de Produtos', () => {
   });
 
   it('deve fazer upload da imagem e salvar o produto com o URL retornado', async () => {
-    // 1. Configuração dos Mocks Iniciais
+    // 1. Configuração do GET inicial
     mockFetch
         .mockResolvedValueOnce({ ok: true, json: async () => mockProducts })
         .mockResolvedValueOnce({ ok: true, json: async () => mockCategories });
 
+    // Mock do upload do Vercel retornando um URL simulado
     const fakeImageUrl = 'https://minha-imagem-na-nuvem.com/foto.jpg';
     (upload as jest.Mock).mockResolvedValue({
       url: fakeImageUrl,
     });
 
-    // Mock da resposta final (POST)
+    // 2. Configuração da resposta do POST final
     const productWithImage: ProductWithRelations = { 
         id: 'prod_novo', 
         name: 'Produto Com Foto', 
@@ -173,7 +181,6 @@ describe('ProductsPage - Gestão de Produtos', () => {
         category: { id: 'cat_1', name: 'Copos' }
     };
 
-    // Configura a resposta do POST que acontecerá no final
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => productWithImage,
@@ -181,12 +188,12 @@ describe('ProductsPage - Gestão de Produtos', () => {
 
     render(<ProductsPage />);
     
-    // ✅ CORREÇÃO: Esperar o loading terminar!
+    // Esperar o loading terminar!
     await waitFor(() => {
         expect(screen.queryByText(/A carregar dados/i)).not.toBeInTheDocument();
     });
     
-    // Agora é seguro clicar
+    // Abrir modal e preencher dados
     fireEvent.click(screen.getByRole('button', { name: /Adicionar Produto/i }));
     
     fireEvent.change(screen.getByLabelText(/Nome do Produto/i), { target: { value: 'Produto Com Foto' } });
@@ -196,6 +203,7 @@ describe('ProductsPage - Gestão de Produtos', () => {
     fireEvent.click(await screen.findByRole('option', { name: 'Copos' }));
 
     // --- SIMULAR UPLOAD ---
+    // Criamos um ficheiro falso e simulamos o evento de drop/seleção
     const file = new File(['(conteúdo binário)'], 'foto.png', { type: 'image/png' });
     const input = screen.getByLabelText(/Imagem do Produto/i); 
 
@@ -208,6 +216,7 @@ describe('ProductsPage - Gestão de Produtos', () => {
     // --- SALVAR ---
     fireEvent.click(screen.getByRole('button', { name: /Salvar/i }));
 
+    // Verificar se o URL retornado pelo upload foi enviado no body do POST
     expect(mockFetch).toHaveBeenCalledWith(
       '/api/products',
       expect.objectContaining({
@@ -218,26 +227,30 @@ describe('ProductsPage - Gestão de Produtos', () => {
   });
 
   it('deve permitir apagar um produto', async () => {
-    // Setup Inicial
+    // 1. Configuração do GET inicial
     mockFetch
         .mockResolvedValueOnce({ ok: true, json: async () => mockProducts })
         .mockResolvedValueOnce({ ok: true, json: async () => mockCategories });
 
     render(<ProductsPage />);
     
-    // ✅ CORREÇÃO: findByText já espera implicitamente, mas garante que o mockFetch inicial foi consumido
+    // Esperar carregar a tabela
     const productRowText = await screen.findByText("Copo Long Drink");
 
-    // Mock da resposta do DELETE
+    // 2. Configuração da resposta do DELETE
     mockFetch.mockResolvedValueOnce({ ok: true });
 
+    // Encontrar o botão de apagar dentro da linha correta
     const row = productRowText.closest('tr')!;
+    // O seletor por 'name' funciona porque adicionámos o aria-label no page.tsx
     const deleteButton = within(row).getByRole('button', { name: /apagar/i });
+    
     fireEvent.click(deleteButton);
 
     expect(global.confirm).toHaveBeenCalledWith("Tem a certeza que quer apagar este produto?");
     expect(mockFetch).toHaveBeenCalledWith('/api/products/prod_1', { method: 'DELETE' });
 
+    // Verificar se o produto sumiu da tela
     await waitFor(() => {
         expect(screen.queryByText("Copo Long Drink")).not.toBeInTheDocument();
     });

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Trash2, Edit, Star, Loader2, Image as ImageIcon } from "lucide-react"; // Removido UploadCloud não usado
+import { PlusCircle, Trash2, Edit, Star, Loader2, Image as ImageIcon } from "lucide-react"; 
 import Image from "next/image";
 import type { Product as PrismaProduct, Category as PrismaCategory, Specification, PriceTier } from "@prisma/client";
 import { upload } from '@vercel/blob/client'; 
@@ -133,7 +133,6 @@ function ProductForm({ product, categories, onSave, onCancel }: {
                 </div>
                 
                 <div className="space-y-2">
-                    {/* ✅ CORREÇÃO 1: htmlFor agora corresponde ao ID do input */}
                     <Label htmlFor="image-upload">Imagem do Produto</Label>
                     <div className="flex gap-4 items-center">
                         {/* Preview */}
@@ -267,7 +266,10 @@ export default function ProductsPage() {
                 ...(isEditing && { id: editingProduct.id }), 
                 name: formData.name,
                 price: finalPrice,
-                slug: formData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, ''),
+                
+                // ✅ CORREÇÃO: Removemos o 'slug'. Deixamos o Backend gerir isso.
+                // O Backend vai criar um slug único automaticamente se este campo não for enviado.
+                
                 categoryId: formData.categoryId,
                 images: [formData.image],
                 
@@ -369,7 +371,6 @@ export default function ProductsPage() {
                                     <TableCell>R$ {startingPrice.toFixed(2)}</TableCell>
 
                                     <TableCell className="text-right">
-                                        {/* ✅ CORREÇÃO 2: Adicionados aria-labels para os testes encontrarem os botões */}
                                         <Button variant="outline" size="sm" onClick={() => handleEditClick(product)} className="mr-2" aria-label={`Editar ${product.name}`}><Edit className="h-4 w-4" /></Button>
                                         <Button variant="destructive" size="sm" onClick={() => handleDeleteProduct(product.id)} aria-label={`Apagar ${product.name}`}><Trash2 className="h-4 w-4" /></Button>
                                     </TableCell>
