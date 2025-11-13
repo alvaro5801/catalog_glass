@@ -61,6 +61,7 @@ function ProductForm({ product, categories, onSave, onCancel }: {
     }, [product, categories]);
 
     const handleUploadFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        // Verifica se há ficheiros selecionados
         if (!event.target.files || event.target.files.length === 0) {
             return;
         }
@@ -81,6 +82,8 @@ function ProductForm({ product, categories, onSave, onCancel }: {
             alert("Falha ao carregar a imagem. Tente novamente.");
         } finally {
             setIsUploading(false);
+            // ✅ CORREÇÃO: Limpa o input para permitir selecionar o mesmo ficheiro novamente se necessário
+            event.target.value = '';
         }
     };
 
@@ -160,6 +163,8 @@ function ProductForm({ product, categories, onSave, onCancel }: {
                                 type="file"
                                 accept="image/*"
                                 onChange={handleUploadFile}
+                                // ✅ CORREÇÃO EXTRA: Garante que o clique reseta o valor para detetar a mudança
+                                onClick={(e) => ((e.target as HTMLInputElement).value = '')}
                                 disabled={isUploading}
                                 className="cursor-pointer file:cursor-pointer file:text-primary hover:file:text-primary/80"
                             />
@@ -267,8 +272,9 @@ export default function ProductsPage() {
                 name: formData.name,
                 price: finalPrice,
                 
-                // ✅ CORREÇÃO: Removemos o 'slug'. Deixamos o Backend gerir isso.
-                // O Backend vai criar um slug único automaticamente se este campo não for enviado.
+                // ✅ CORREÇÃO (Slug removido):
+                // Removemos a geração manual do slug. O Backend agora gera um slug único.
+                // slug: formData.name.toLowerCase()... (REMOVIDO)
                 
                 categoryId: formData.categoryId,
                 images: [formData.image],
