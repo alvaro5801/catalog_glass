@@ -70,19 +70,30 @@ function ProductForm({ product, categories, onSave, onCancel }: {
         setIsUploading(true);
 
         try {
-            const newBlob = await upload(file.name, file, {
+            // ✅ CORREÇÃO: Geramos um nome único manualmente.
+            // Isto resolve o erro de TypeScript e evita o erro "Blob already exists".
+            const uniqueFilename = `${Date.now()}-${file.name}`;
+
+            const newBlob = await upload(uniqueFilename, file, {
                 access: 'public',
                 handleUploadUrl: '/api/upload',
+                // Removemos 'addRandomSuffix' para evitar o erro de tipagem ts(2353)
             });
 
             setFormData(prev => ({ ...prev, image: newBlob.url }));
             
         } catch (error) {
             console.error("Erro no upload:", error);
-            alert("Falha ao carregar a imagem. Tente novamente.");
+            
+            // Melhoria na mensagem de erro para o utilizador
+            let msg = "Falha ao carregar a imagem.";
+            if (error instanceof Error) {
+                msg += " Detalhe: " + error.message;
+            }
+            alert(msg);
         } finally {
             setIsUploading(false);
-            // ✅ CORREÇÃO: Limpa o input para permitir selecionar o mesmo ficheiro novamente se necessário
+            // ✅ Limpa o input para permitir selecionar o mesmo ficheiro novamente se necessário
             event.target.value = '';
         }
     };
@@ -163,7 +174,7 @@ function ProductForm({ product, categories, onSave, onCancel }: {
                                 type="file"
                                 accept="image/*"
                                 onChange={handleUploadFile}
-                                // ✅ CORREÇÃO EXTRA: Garante que o clique reseta o valor para detetar a mudança
+                                // ✅ Garante que o clique reseta o valor para detetar a mudança
                                 onClick={(e) => ((e.target as HTMLInputElement).value = '')}
                                 disabled={isUploading}
                                 className="cursor-pointer file:cursor-pointer file:text-primary hover:file:text-primary/80"
@@ -272,9 +283,7 @@ export default function ProductsPage() {
                 name: formData.name,
                 price: finalPrice,
                 
-                // ✅ CORREÇÃO (Slug removido):
-                // Removemos a geração manual do slug. O Backend agora gera um slug único.
-                // slug: formData.name.toLowerCase()... (REMOVIDO)
+                // Removemos a geração manual do slug. O Backend gera um slug único.
                 
                 categoryId: formData.categoryId,
                 images: [formData.image],
