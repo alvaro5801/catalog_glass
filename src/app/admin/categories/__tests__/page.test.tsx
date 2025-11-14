@@ -1,6 +1,5 @@
 // src/app/admin/categories/__tests__/page.test.tsx
 import React from 'react';
-// ✅ Importámos o 'act' (da branch main)
 import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import CategoriesPage from '@/app/admin/categories/page';
 
@@ -8,7 +7,6 @@ import CategoriesPage from '@/app/admin/categories/page';
 global.fetch = jest.fn();
 const mockFetch = global.fetch as jest.Mock;
 
-// ✅ Adicionámos os temporizadores (da branch main)
 jest.useFakeTimers();
 
 describe('CategoriesPage - Gestão de Categorias', () => {
@@ -17,7 +15,6 @@ describe('CategoriesPage - Gestão de Categorias', () => {
     mockFetch.mockClear();
   });
 
-  // ✅ Adicionámos o 'afterEach' e 'afterAll' (da branch main)
   afterEach(() => {
     jest.clearAllTimers();
   });
@@ -29,7 +26,7 @@ describe('CategoriesPage - Gestão de Categorias', () => {
   // --- Testes de Sucesso ---
 
   it('deve carregar e exibir as categorias iniciais da API', async () => {
-    // ✅ Usámos o mock de objetos (da branch feature/test)
+    // ✅ MOCK CORRETO: Retorna objetos completos
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [
@@ -40,18 +37,16 @@ describe('CategoriesPage - Gestão de Categorias', () => {
 
     render(<CategoriesPage />);
 
-    // Espera o loading desaparecer
     await waitFor(() => {
       expect(screen.queryByText(/A carregar categorias.../i)).not.toBeInTheDocument();
     });
 
-    // Verifica se os dados (já mapeados para string) apareceram
     expect(screen.getByText("Bebidas")).toBeInTheDocument();
     expect(screen.getByText("Comidas")).toBeInTheDocument();
   });
 
   it('deve permitir adicionar uma nova categoria e limpar a mensagem de sucesso', async () => {
-    // ✅ Usámos o mock de objetos (da branch feature/test)
+    // 1. Carregamento inicial
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [{ id: 'c1', name: 'Bebidas' }],
@@ -60,21 +55,22 @@ describe('CategoriesPage - Gestão de Categorias', () => {
     render(<CategoriesPage />);
     await screen.findByText("Bebidas");
 
-    // ✅ Usámos o mock de objeto no POST (da branch feature/test)
+    // 2. Mock do POST (Adicionar)
+    // A API real retorna o objeto da nova categoria criada
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ id: 'c2', name: 'Decoração' }), // API POST
+      json: async () => ({ id: 'c2', name: 'Decoração' }), 
     });
 
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Decoração' } });
     fireEvent.click(screen.getByRole('button', { name: /Adicionar/i }));
 
-    // Espera pela nova categoria e pela mensagem de sucesso
+    // Verifica se a nova categoria aparece na lista e a mensagem de sucesso
     const newCategoryItem = await screen.findByText("Decoração");
     expect(newCategoryItem).toBeInTheDocument();
     expect(await screen.findByText('Categoria adicionada com sucesso!')).toBeInTheDocument();
 
-    // ✅ Adicionámos o teste do temporizador (da branch main)
+    // Avança o tempo para testar o desaparecimento da mensagem
     act(() => {
       jest.runAllTimers();
     });
@@ -85,7 +81,7 @@ describe('CategoriesPage - Gestão de Categorias', () => {
   });
 
   it('deve permitir apagar uma categoria e limpar a mensagem de sucesso', async () => {
-    // ✅ Usámos o mock de objetos (da branch feature/test)
+    // 1. Carregamento inicial com 2 categorias
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [
@@ -97,28 +93,29 @@ describe('CategoriesPage - Gestão de Categorias', () => {
     render(<CategoriesPage />);
     await screen.findByText("Para Apagar");
 
-    // Mock da resposta do DELETE (correto em ambas as branches)
+    // 2. Mock do DELETE
+    // ⚠️ CORREÇÃO IMPORTANTE AQUI: 
+    // O mock agora deve retornar uma lista de OBJETOS, tal como a API real faz.
+    // O código novo precisa disto para fazer o .map(cat => cat.name) funcionar.
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ["Bebidas"], // API [name]/route.ts retorna a lista
+      json: async () => [{ id: 'c1', name: 'Bebidas' }], 
     });
 
     const categoryItem = screen.getByText("Para Apagar");
     const row = categoryItem.closest('div')!;
     
-    // ✅ Usámos o seletor mais específico (da branch feature/test)
     const deleteButton = within(row).getByRole('button', { name: /Apagar Para Apagar/i });
     
     fireEvent.click(deleteButton);
     
-    // Espera a categoria desaparecer e a mensagem de sucesso aparecer
+    // Espera a categoria desaparecer
     await waitFor(() => {
       expect(screen.queryByText("Para Apagar")).not.toBeInTheDocument();
     });
     expect(await screen.findByText('Categoria apagada com sucesso!')).toBeInTheDocument();
     expect(screen.getByText("Bebidas")).toBeInTheDocument();
 
-    // ✅ Adicionámos o teste do temporizador (da branch main)
     act(() => {
       jest.runAllTimers();
     });
@@ -128,10 +125,9 @@ describe('CategoriesPage - Gestão de Categorias', () => {
     });
   });
 
-  // --- Testes de Erro (Mantidos da branch feature/test) ---
+  // --- Testes de Erro ---
   
   it('deve exibir uma mensagem de erro se o carregamento inicial (GET) falhar', async () => {
-    // Simular uma falha na API
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 500,
@@ -140,17 +136,14 @@ describe('CategoriesPage - Gestão de Categorias', () => {
 
     render(<CategoriesPage />);
 
-    // Espera o loading desaparecer
     await waitFor(() => {
       expect(screen.queryByText(/A carregar categorias.../i)).not.toBeInTheDocument();
     });
 
-    // Verifica se a mensagem de erro específica do 'catch' do 'useEffect' foi mostrada
     expect(await screen.findByText('Não foi possível carregar as categorias.')).toBeInTheDocument();
   });
 
   it('deve exibir uma mensagem de erro se a adição (POST) falhar', async () => {
-    // ✅ Usámos o mock de objetos (da branch feature/test)
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [{ id: 'c1', name: 'Bebidas' }],
@@ -159,7 +152,6 @@ describe('CategoriesPage - Gestão de Categorias', () => {
     render(<CategoriesPage />);
     await screen.findByText("Bebidas");
 
-    // Simular falha no POST (ex: nome já existe)
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 400,
@@ -170,12 +162,10 @@ describe('CategoriesPage - Gestão de Categorias', () => {
     fireEvent.change(input, { target: { value: 'Bebidas' } });
     fireEvent.click(screen.getByRole('button', { name: /Adicionar/i }));
 
-    // Espera pela mensagem de erro vinda da API
     expect(await screen.findByText("Esta categoria já existe.")).toBeInTheDocument();
   });
 
   it('deve exibir uma mensagem de erro se a edição (PUT) falhar', async () => {
-    // ✅ Usámos o mock de objetos (da branch feature/test)
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [{ id: 'c1', name: 'Bebidas' }],
@@ -184,23 +174,19 @@ describe('CategoriesPage - Gestão de Categorias', () => {
     render(<CategoriesPage />);
     const categoryItem = await screen.findByText("Bebidas");
     
-    // Clicar em Editar
     const row = categoryItem.closest('div')!;
     const editButton = within(row).getByRole('button', { name: /Editar Bebidas/i });
     fireEvent.click(editButton);
     
-    // Simular falha no PUT
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 500,
       json: async () => ({ error: "Erro interno no servidor" }),
     });
     
-    // Clicar em Guardar
     const saveButton = within(row).getByRole('button', { name: /Guardar/i });
     fireEvent.click(saveButton);
     
-    // Espera pela mensagem de erro que a API simulada realmente enviou
     expect(await screen.findByText("Erro interno no servidor")).toBeInTheDocument();
   });
 

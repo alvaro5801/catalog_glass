@@ -55,10 +55,11 @@ export default function CategoriesPage() {
                 
                 const data = await response.json();
                 
+                // ✅ Garante que guardamos apenas os nomes (strings)
                 if (Array.isArray(data)) {
                     setCategories(data.map((cat: { id: string, name: string }) => cat.name));
                 } else {
-                    setCategories(data);
+                    setCategories([]);
                 }
 
             } catch (error) {
@@ -89,12 +90,12 @@ export default function CategoriesPage() {
             }
             
             const newCategoryData = await response.json();
-            setCategories(prev => [...prev, newCategoryData.name]); // Adicionar apenas o nome
+            // Aqui já estava correto (newCategoryData.name), mantemos assim
+            setCategories(prev => [...prev, newCategoryData.name]); 
             setNewCategory("");
             setFeedback({ type: 'success', message: 'Categoria adicionada com sucesso!' });
-        } catch (error: unknown) { // ✅ CORREÇÃO AQUI (linha 105)
+        } catch (error: unknown) {
             console.error("Erro:", error);
-            // Verifica se 'error' é um objeto Error antes de aceder a 'message'
             const message = error instanceof Error ? error.message : 'Erro ao adicionar a categoria.';
             setFeedback({ type: 'error', message: message });
         } finally {
@@ -113,11 +114,15 @@ export default function CategoriesPage() {
             if (!response.ok) throw new Error('Falha ao apagar');
             
             const updatedCategoriesList = await response.json();
-            setCategories(updatedCategoriesList); // Usar a lista retornada
+            
+            // ✅ CORREÇÃO AQUI: Mapear objetos para strings
+            const categoryNames = updatedCategoriesList.map((cat: { name: string }) => cat.name);
+            setCategories(categoryNames); 
+
             setFeedback({ type: 'success', message: 'Categoria apagada com sucesso!' });
         } catch (error) {
             console.error("Erro:", error);
-            setFeedback({ type: 'error', message: 'Erro ao apagar a categoria.' });
+            setFeedback({ type: 'error', message: 'Você não pode apagar uma categoria que estar vinculada a um produto!' });
         } finally {
             setLoadingAction({ action: null, target: null });
         }
@@ -145,12 +150,15 @@ export default function CategoriesPage() {
             }
 
             const updatedCategoriesList = await response.json();
-            setCategories(updatedCategoriesList); // Usar a lista retornada
+            
+            // ✅ CORREÇÃO AQUI: Mapear objetos para strings
+            const categoryNames = updatedCategoriesList.map((cat: { name: string }) => cat.name);
+            setCategories(categoryNames);
+
             setEditingCategory(null);
             setFeedback({ type: 'success', message: 'Categoria atualizada com sucesso!' });
-        } catch (error: unknown) { // ✅ CORREÇÃO AQUI (linha 163)
+        } catch (error: unknown) {
             console.error("Erro:", error);
-            // Verifica se 'error' é um objeto Error antes de aceder a 'message'
             const message = error instanceof Error ? error.message : 'Erro ao atualizar a categoria.';
             setFeedback({ type: 'error', message: message });
         } finally {
