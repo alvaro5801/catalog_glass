@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 // GET: Público (para a vitrine)
 export async function GET(
-  _request: NextRequest, // ✅ Renomeado para _request pois não é usado aqui
+  _request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -27,9 +27,9 @@ export async function GET(
   }
 }
 
-// ✅ PUT PROTEGIDO
+// ✅ PUT PROTEGIDO (CORRIGIDO)
 export async function PUT(
-  request: NextRequest, // Aqui usamos 'request' para ler o body
+  request: NextRequest, 
   context: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -40,7 +40,7 @@ export async function PUT(
     const { id } = await context.params;
     const catalogId = await getUserCatalogId(user.email);
 
-    // 2. Verificar Propriedade (O produto pertence ao catálogo do user?)
+    // 2. Verificar Propriedade
     const existingProduct = await productService.getProductById(id);
     if (!existingProduct) return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 });
     
@@ -48,11 +48,46 @@ export async function PUT(
         return NextResponse.json({ error: "Acesso proibido a este produto." }, { status: 403 });
     }
 
+    // 3. Ler e Limpar os Dados (O Segredo da Correção 🛠️)
     const body = await request.json();
-    const updatedProduct = await productService.updateProduct(id, body);
+
+    // Removemos campos que não existem na tabela Product ou que precisam de tratamento especial
+    // 'price', 'specifications' e 'priceTable' são tratados separadamente abaixo.
+    // 'id' e 'category' (nome) também removemos para não tentar sobrescrever chaves primárias ou campos virtuais.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { price, specifications, priceTable, id: _bodyId, category, ...otherFields } = body;
+
+    // 4. Construir o objeto de atualização no formato que o Prisma aceita
+    const updateData = {
+        ...otherFields,
+        
+        // Atualizamos o priceInfo (string) para manter consistência visual
+        priceInfo: String(price),
+
+        // Atualizar Especificações (Relação 1 para 1)
+        specifications: {
+            upsert: {
+                create: specifications,
+                update: specifications
+            }
+        },
+
+        // Atualizar Tabela de Preços (Relação 1 para N)
+        // Estratégia Simples: Apagar os preços antigos e criar o novo
+        // Isso resolve o problema de IDs perdidos ou lógica complexa de atualização
+        priceTable: {
+            deleteMany: {}, // Remove todos os preços antigos deste produto
+            create: [{ quantity: '1', price: Number(price) }] // Adiciona o novo preço
+        }
+    };
+
+    // 5. Executar a atualização
+    const updatedProduct = await productService.updateProduct(id, updateData);
+    
     return NextResponse.json(updatedProduct);
 
   } catch (error) {
+    console.error("Erro no PUT:", error); // Log para ajudar no debug
     const err = error as Error;
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -60,7 +95,7 @@ export async function PUT(
 
 // ✅ DELETE PROTEGIDO
 export async function DELETE(
-  _request: NextRequest, // ✅ Renomeado para _request pois não é usado aqui
+  _request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {

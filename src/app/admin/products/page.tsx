@@ -70,14 +70,12 @@ function ProductForm({ product, categories, onSave, onCancel }: {
         setIsUploading(true);
 
         try {
-            // ✅ CORREÇÃO: Geramos um nome único manualmente.
-            // Isto resolve o erro de TypeScript e evita o erro "Blob already exists".
+            // Gera nome único para evitar erros e sobreposições
             const uniqueFilename = `${Date.now()}-${file.name}`;
 
             const newBlob = await upload(uniqueFilename, file, {
                 access: 'public',
                 handleUploadUrl: '/api/upload',
-                // Removemos 'addRandomSuffix' para evitar o erro de tipagem ts(2353)
             });
 
             setFormData(prev => ({ ...prev, image: newBlob.url }));
@@ -85,7 +83,6 @@ function ProductForm({ product, categories, onSave, onCancel }: {
         } catch (error) {
             console.error("Erro no upload:", error);
             
-            // Melhoria na mensagem de erro para o utilizador
             let msg = "Falha ao carregar a imagem.";
             if (error instanceof Error) {
                 msg += " Detalhe: " + error.message;
@@ -93,7 +90,6 @@ function ProductForm({ product, categories, onSave, onCancel }: {
             alert(msg);
         } finally {
             setIsUploading(false);
-            // ✅ Limpa o input para permitir selecionar o mesmo ficheiro novamente se necessário
             event.target.value = '';
         }
     };
@@ -174,7 +170,6 @@ function ProductForm({ product, categories, onSave, onCancel }: {
                                 type="file"
                                 accept="image/*"
                                 onChange={handleUploadFile}
-                                // ✅ Garante que o clique reseta o valor para detetar a mudança
                                 onClick={(e) => ((e.target as HTMLInputElement).value = '')}
                                 disabled={isUploading}
                                 className="cursor-pointer file:cursor-pointer file:text-primary hover:file:text-primary/80"
@@ -270,9 +265,23 @@ export default function ProductsPage() {
 
     const handleSaveProduct = async (formData: ProductFormData) => {
         try {
+            // 1. Validação de Campos Obrigatórios
             if (!formData.name || !formData.price || !formData.categoryId) {
                 alert("Por favor, preencha o nome, o preço e selecione uma categoria.");
                 return;
+            }
+
+            // ✅ 2. NOVA VERIFICAÇÃO: Nome Duplicado
+            const nameExists = products.some(p => 
+                // Compara o nome (ignorando maiúsculas/minúsculas e espaços extra)
+                p.name.trim().toLowerCase() === formData.name.trim().toLowerCase() &&
+                // Se estivermos a editar, ignora o próprio produto (permitir guardar se não mudou o nome)
+                p.id !== editingProduct?.id
+            );
+
+            if (nameExists) {
+                alert("⚠️ Já existe um produto com esse nome!\nPor favor, escolha um nome diferente para evitar confusão no catálogo.");
+                return; // Para a execução aqui, não salva nada.
             }
 
             const isEditing = !!editingProduct;
@@ -282,8 +291,6 @@ export default function ProductsPage() {
                 ...(isEditing && { id: editingProduct.id }), 
                 name: formData.name,
                 price: finalPrice,
-                
-                // Removemos a geração manual do slug. O Backend gera um slug único.
                 
                 categoryId: formData.categoryId,
                 images: [formData.image],
