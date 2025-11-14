@@ -84,7 +84,7 @@ export function Header() {
           
           <Link href="/catalogo" className="text-muted-foreground hover:text-primary transition-colors">Catálogo</Link>
           
-          <Button asChild><Link href="/admin/dashboard">Aceder ao Painel</Link></Button>
+          <Button asChild><Link href="/admin/dashboard">Painel</Link></Button>
           
           {/* 'Sair' vai para '/' (a landing page do SaaS) */}
           <Button variant="outline" asChild><Link href="/">Sair</Link></Button>
