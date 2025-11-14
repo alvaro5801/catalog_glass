@@ -179,7 +179,7 @@ export const authOptions: AuthOptions = {
 
   // Página personalizada de login (para redirecionamentos automáticos)
   pages: {
-    signIn: '/saas',
+    signIn: '/', // ✅ ALTERAÇÃO: Agora o login está na raiz (Landing Page)
   },
 
   debug: process.env.NODE_ENV === 'development',

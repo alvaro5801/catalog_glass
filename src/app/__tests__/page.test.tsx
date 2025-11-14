@@ -1,165 +1,73 @@
 // src/app/__tests__/page.test.tsx
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import Home from '../page'; // A nossa página (agora um Server Component)
-import { FavoritesProvider } from '@/contexts/favorites-context'; // ✅ 1. Importar o Provider
 
-// --- Tipos de Dados Similares aos do Prisma (para os nossos mocks) ---
-const mockCategories = [
-  { id: 'c1', name: 'Copos', catalogId: 'cat123' },
-  { id: 'c2', name: 'Taças', catalogId: 'cat123' },
-];
+// ✅ CORREÇÃO: Usar o alias '@' em vez de '../' resolve o erro de caminho
+import Home from '@/app/page'; 
 
-const mockProducts = [
-  { 
-    id: 'p1', 
-    name: 'Copo de Teste em Destaque', 
-    slug: 'copo-teste', 
-    images: ['/img.jpg'], 
-    isFeatured: true, // Este vai aparecer
-    categoryId: 'c1', 
-    priceTable: [], 
-    specifications: null, 
-    shortDescription: '', 
-    description: '', 
-    priceInfo: '', 
-    catalogId: 'cat123' 
-  },
-  { 
-    id: 'p2', 
-    name: 'Taça de Teste Normal', 
-    slug: 'taca-teste', 
-    images: ['/img.jpg'], 
-    isFeatured: false, // Este NÃO vai aparecer na secção de destaques
-    categoryId: 'c2', 
-    priceTable: [], 
-    specifications: null, 
-    shortDescription: '', 
-    description: '', 
-    priceInfo: '', 
-    catalogId: 'cat123' 
-  },
-];
-
-// --- SIMULAR (MOCK) OS SERVIÇOS ---
-const mockGetProducts = jest.fn();
-const mockGetAllCategories = jest.fn();
-
-jest.mock('@/domain/services/ProductService', () => ({
-  ProductService: jest.fn().mockImplementation(() => ({
-    getProducts: mockGetProducts,
-  })),
-}));
-jest.mock('@/domain/services/CategoryService', () => ({
-  CategoryService: jest.fn().mockImplementation(() => ({
-    getAllCategories: mockGetAllCategories,
-  })),
-}));
-
-// Mockar os Repositórios (dependências dos serviços)
-jest.mock('@/domain/repositories/ProductRepository');
-jest.mock('@/domain/repositories/CategoryRepository');
-
-
-// --- MOCKS DE UI E HOOKS (Mantêm-se) ---
-jest.mock('@/components/ui/carousel', () => ({
-  Carousel: ({ children }: { children: React.ReactNode }) => <div data-testid="mock-carousel">{children}</div>,
-  CarouselContent: ({ children }: { children: React.ReactNode }) => <div data-testid="mock-carousel-content">{children}</div>,
-  CarouselItem: ({ children }: { children: React.ReactNode }) => <div data-testid="mock-carousel-item">{children}</div>,
-  CarouselNext: () => <button>Next</button>,
-  CarouselPrevious: () => <button>Previous</button>,
-}));
-jest.mock('../page-layout', () => {
+// 1. Mock do PageLayout
+jest.mock('@/app/page-layout', () => {
   return function MockPageLayout({ children }: { children: React.ReactNode }) {
-    return <div>{children}</div>;
+    return <div data-testid="page-layout">{children}</div>;
   };
 });
-jest.mock('react', () => ({
-  ...jest.requireActual('react'),
-  useRef: jest.fn(() => ({ current: null })),
-}));
-jest.mock('framer-motion', () => ({
-  ...jest.requireActual('framer-motion'),
-  useScroll: jest.fn(() => ({ scrollYProgress: { get: () => 0, onChange: () => {} } })),
-  useTransform: jest.fn(() => ({ get: () => '0%', onChange: () => {} })), // Simplificado
-  motion: {
-    div: jest.fn(({ children, ...rest }) => <div {...rest}>{children}</div>)
-  }
-}));
+
+// 2. Mock do next/link
 jest.mock('next/link', () => {
   // eslint-disable-next-line react/display-name
   return ({ href, children }: { href: string, children: React.ReactNode }) => {
     return <a href={href}>{children}</a>;
   };
 });
-// Em: src/app/__tests__/page.test.tsx
-jest.mock('next/image', () => ({
-  __esModule: true,
-  default: (props: React.ComponentProps<'img'> & { fill?: boolean }) => {
-    // ✅ Adicionamos este comentário para ignorar o aviso de 'variável não usada'
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { fill: _fill, ...rest } = props; 
-    
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img {...rest} alt={props.alt || ""} />; 
-  },
-}));
 
+describe('Home Page (SaaS Landing Page)', () => {
 
-// --- OS TESTES ATUALIZADOS ---
-describe('Home Page (Server Component)', () => {
-  
-  beforeEach(() => {
-    // Limpar os mocks antes de cada teste
-    mockGetProducts.mockClear();
-    mockGetAllCategories.mockClear();
-    (React.useRef as jest.Mock).mockClear();
-    (jest.requireMock('framer-motion').useScroll as jest.Mock).mockClear();
-    (jest.requireMock('framer-motion').useTransform as jest.Mock).mockClear();
+  it('deve renderizar a secção Hero com o título e o CTA principal', () => {
+    render(<Home />);
+
+    // Verifica o título principal (H1)
+    expect(screen.getByRole('heading', { 
+      name: /Crie um catálogo online profissional em menos de 5 minutos/i 
+    })).toBeInTheDocument();
+
+    // Verifica a descrição do Hero
+    expect(screen.getByText(/Diga adeus aos PDFs desatualizados/i)).toBeInTheDocument();
+
+    // Verifica o botão de CTA principal (Call to Action)
+    const ctaButton = screen.getByRole('link', { name: /Criar Meu Catálogo Grátis/i });
+    expect(ctaButton).toBeInTheDocument();
+    expect(ctaButton).toHaveAttribute('href', '/signup');
   });
 
-  it('deve renderizar os elementos principais, produtos e categorias dos serviços', async () => {
-    // 1. Preparação: Dizer aos mocks o que devem retornar
-    mockGetProducts.mockResolvedValue(mockProducts);
-    mockGetAllCategories.mockResolvedValue(mockCategories);
+  it('deve renderizar a secção de Prova Social', () => {
+    render(<Home />);
 
-    // 2. Execução: Chamar o Server Component (que agora é async)
-    const resolvedComponent = await Home();
-    
-    // ✅ 2. CORREÇÃO: Embrulhar o componente no Provider
-    render(<FavoritesProvider>{resolvedComponent}</FavoritesProvider>);
-
-    // 3. Verificação:
-    // Títulos principais
-    expect(screen.getByRole('heading', { level: 1, name: /Transforme Momentos em Memórias/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Explorar Catálogo/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Personalize em Apenas 3 Passos/i })).toBeInTheDocument();
-
-    // Verificar produtos em destaque
-    expect(screen.getByRole('heading', { name: /Produtos em Destaque/i })).toBeInTheDocument();
-    expect(screen.getByText('Copo de Teste em Destaque')).toBeInTheDocument();
-    expect(screen.queryByText('Taça de Teste Normal')).not.toBeInTheDocument();
-
-    // Verificar categorias
-    expect(screen.getByRole('heading', { name: /Navegue por Categoria/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Copos/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Taças/i })).toBeInTheDocument();
+    expect(screen.getByText(/Junte-se a centenas de empreendedores/i)).toBeInTheDocument();
+    // Verifica se alguns dos "Logos" falsos estão presentes
+    expect(screen.getByText('Doce Sabor Confeitaria')).toBeInTheDocument();
+    expect(screen.getByText('Ateliê Criativo')).toBeInTheDocument();
   });
 
-  it('não deve renderizar a secção de destaques se nenhum produto for destacado', async () => {
-    // 1. Preparação: Simular que os produtos vêm sem 'isFeatured: true'
-    const nonFeaturedProducts = mockProducts.map(p => ({ ...p, isFeatured: false }));
-    mockGetProducts.mockResolvedValue(nonFeaturedProducts);
-    mockGetAllCategories.mockResolvedValue(mockCategories);
+  it('deve renderizar a secção de Funcionalidades', () => {
+    render(<Home />);
 
-    // 2. Execução:
-    const resolvedComponent = await Home();
+    expect(screen.getByRole('heading', { name: /Tudo o que precisa para vender mais/i })).toBeInTheDocument();
+
+    // Verifica se os textos das funcionalidades estão presentes
+    expect(screen.getByText(/Editor Simples/i)).toBeInTheDocument();
+    expect(screen.getByText(/100% Responsivo/i)).toBeInTheDocument();
+    expect(screen.getByText(/WhatsApp Integrado/i)).toBeInTheDocument();
+    expect(screen.getByText(/Link Único/i)).toBeInTheDocument();
+  });
+
+  it('deve renderizar a chamada final para ação (Footer CTA)', () => {
+    render(<Home />);
+
+    expect(screen.getByRole('heading', { name: /Pronto para criar o seu catálogo\?/i })).toBeInTheDocument();
     
-    // ✅ 3. CORREÇÃO: Embrulhar o componente no Provider
-    render(<FavoritesProvider>{resolvedComponent}</FavoritesProvider>);
-
-    // 3. Verificação:
-    // O título da secção de destaques não deve existir
-    expect(screen.queryByRole('heading', { name: /Produtos em Destaque/i })).not.toBeInTheDocument();
+    // Verifica o botão final "Começar Agora"
+    const finalCta = screen.getByRole('link', { name: /Começar Agora/i });
+    expect(finalCta).toBeInTheDocument();
+    expect(finalCta).toHaveAttribute('href', '/signup');
   });
 });

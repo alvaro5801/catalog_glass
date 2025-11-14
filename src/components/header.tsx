@@ -24,24 +24,24 @@ export function Header() {
   const pathname = usePathname();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  if (pathname === '/saas') {
+  // --- CABEÇALHO DA LANDING PAGE (Raiz '/') ---
+  // Este cabeçalho aparece apenas na página de vendas/login
+  if (pathname === '/') {
     return (
       <header className="border-b sticky top-0 bg-white z-10">
         <div className="container mx-auto px-4 h-24 flex items-center justify-between">
           
-          {/* Logótipo à Esquerda (para "empurrar" o formulário da direita) */}
-          <Link href="/saas" className="text-2xl font-bold text-gray-800">
-            SuaMarca
+          {/* Logótipo à Esquerda */}
+          <Link href="/" className="text-2xl font-bold text-gray-800">
+            Printa Copos
           </Link>
 
-          {/* --- NAV PARA DESKTOP (Ecrãs 'md' ou maiores) --- */}
-          {/* Mostra o novo formulário horizontal */}
+          {/* --- NAV PARA DESKTOP --- */}
           <nav className="hidden md:block">
             <SignInFormHorizontal />
           </nav>
 
-          {/* --- NAV PARA MOBILE (Ecrãs 'md' ou menores) --- */}
-          {/* Mostra os botões que abrem o painel lateral */}
+          {/* --- NAV PARA MOBILE --- */}
           <nav className="flex md:hidden items-center gap-2">
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
               <SheetTrigger asChild>
@@ -56,7 +56,6 @@ export function Header() {
                   <SheetTitle className="text-2xl">Aceder à sua conta</SheetTitle>
                 </SheetHeader>
                 <div className="mt-6">
-                  {/* Usa o formulário vertical original dentro do painel */}
                   <SignInForm />
                 </div>
               </SheetContent>
@@ -68,18 +67,27 @@ export function Header() {
     );
   }
 
-  // (O resto do ficheiro - cabeçalho "logado" - continua igual)
+  // --- CABEÇALHO PADRÃO (Vitrine / Catálogo / Admin) ---
+  // Este cabeçalho aparece quando o utilizador já está a navegar na loja
   return (
     <header className="border-b sticky top-0 bg-white z-10">
       <div className="container mx-auto px-4 h-24 flex items-center justify-between overflow-hidden">
-        <Link href="/" className="flex items-center gap-2">
+        
+        {/* Logótipo aponta para a VITRINE para manter o utilizador na loja */}
+        <Link href="/vitrine" className="flex items-center gap-2">
           <Image src="/logo.jpg" alt="Logótipo Printa Copos" width={234} height={98} className="h-32 w-auto" />
         </Link>
+        
         <nav className="flex items-center gap-4 text-base font-medium">
-          <Link href="/" className="text-muted-foreground hover:text-primary transition-colors">Início</Link>
+          {/* ✅ ALTERAÇÃO: 'Início' vai para '/vitrine' (a home da loja) */}
+          <Link href="/vitrine" className="text-muted-foreground hover:text-primary transition-colors">Início</Link>
+          
           <Link href="/catalogo" className="text-muted-foreground hover:text-primary transition-colors">Catálogo</Link>
+          
           <Button asChild><Link href="/admin/dashboard">Aceder ao Painel</Link></Button>
-          <Button variant="outline" asChild><Link href="/saas">Sair</Link></Button>
+          
+          {/* 'Sair' vai para '/' (a landing page do SaaS) */}
+          <Button variant="outline" asChild><Link href="/">Sair</Link></Button>
         </nav>
       </div>
     </header>

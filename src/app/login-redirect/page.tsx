@@ -3,32 +3,35 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { getLoginRedirectUrl } from "./actions"; // Importar a nossa nova ação
+import { Loader2 } from "lucide-react";
 
 export default function LoginRedirectPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Verifica se o onboarding foi completado (baseado na flag local)
-    // Nota: Idealmente, isto deveria vir da sessão do utilizador no futuro
-    const onboardingComplete = localStorage.getItem('onboardingComplete') === 'true';
+    const resolveRedirect = async () => {
+      try {
+        // Pede ao servidor o URL correto (Vitrine ou Onboarding)
+        const targetUrl = await getLoginRedirectUrl();
+        
+        console.log("A redirecionar para:", targetUrl);
+        router.push(targetUrl);
+      } catch (error) {
+        console.error("Erro no redirecionamento:", error);
+        // Em caso de erro total, manda para o dashboard por segurança
+        router.push('/admin/dashboard');
+      }
+    };
 
-    console.log("Onboarding completo?", onboardingComplete);
-
-    if (onboardingComplete) {
-      // ✅ CORREÇÃO: Redirecionar para o Painel Admin, não para a Home pública
-      console.log("Redirecionando para: /admin/dashboard");
-      router.push('/admin/dashboard');
-    } else {
-      console.log("Redirecionando para: /onboarding (Assistente)");
-      router.push('/onboarding');
-    }
+    resolveRedirect();
   }, [router]);
 
   return (
     <div className="flex h-screen w-full items-center justify-center bg-muted">
       <div className="flex flex-col items-center gap-4">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-        <p className="text-muted-foreground font-medium">A entrar no painel...</p>
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="text-muted-foreground font-medium">A entrar na sua loja...</p>
       </div>
     </div>
   );

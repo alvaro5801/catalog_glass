@@ -1,7 +1,7 @@
 // src/app/[slug]/__tests__/page.test.tsx
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import PublicStorePage from "../page";
+import PublicStorePage from "../page"; 
 
 // --- MOCKS ---
 
@@ -15,12 +15,12 @@ jest.mock("@/domain/services/CatalogService", () => {
   };
 });
 
-// 2. Mock do Repositório (necessário porque é instanciado na página)
+// 2. Mock do Repositório
 jest.mock("@/domain/repositories/CatalogRepository");
 
 // 3. Mock do Componente Visual (CatalogContent)
-// Para não testarmos a complexidade do catálogo aqui, apenas se ele é chamado
-jest.mock("../../catalogo/catalog-content", () => ({
+// IMPORTANTE: Deve usar o mesmo caminho de importação que o componente real usa (@/app/...)
+jest.mock("@/app/catalogo/catalog-content", () => ({
   CatalogContent: () => <div data-testid="catalog-content">Conteúdo da Loja</div>,
 }));
 
@@ -30,32 +30,53 @@ jest.mock("next/navigation", () => ({
   notFound: () => mockNotFound(),
 }));
 
+// 5. Mock do next/link
+jest.mock("next/link", () => {
+  // eslint-disable-next-line react/display-name
+  return ({ href, children }: { href: string, children: React.ReactNode }) => {
+    return <a href={href}>{children}</a>;
+  };
+});
+
 describe("Public Store Page ([slug])", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("deve renderizar a loja quando o catálogo existe", async () => {
+  it("deve renderizar a loja com o layout correto quando o catálogo existe", async () => {
     // Preparação
     mockGetCatalogBySlug.mockResolvedValue({
       id: "1",
-      slug: "minha-loja",
+      slug: "minha-loja-teste",
       products: [{ id: "p1", name: "Produto 1" }],
       categories: [{ id: "c1", name: "Categoria 1" }],
     });
 
-    const params = Promise.resolve({ slug: "minha-loja" });
+    // Simula os parâmetros como Promise (Next.js 15)
+    const params = Promise.resolve({ slug: "minha-loja-teste" });
 
     // Execução
     const page = await PublicStorePage({ params });
     render(page);
 
-    // Verificação
-    // Vê se o título da loja aparece
-    expect(screen.getByText("Loja: minha-loja")).toBeInTheDocument();
-    // Vê se o componente de conteúdo foi carregado
+    // Verificação:
+    
+    // 1. Título da Loja (sem hífens)
+    expect(screen.getByRole("heading", { 
+        name: /minha loja teste/i 
+    })).toBeInTheDocument();
+
+    // 2. Elementos do Header
+    expect(screen.getByText("Catálogo Digital")).toBeInTheDocument();
+
+    // 3. Conteúdo Principal
     expect(screen.getByTestId("catalog-content")).toBeInTheDocument();
-    // Garante que NÃO chamou o notFound
+
+    // 4. Rodapé
+    const currentYear = new Date().getFullYear();
+    expect(screen.getByText(new RegExp(`© ${currentYear}`, "i"))).toBeInTheDocument();
+    expect(screen.getByText(/Powered by/i)).toBeInTheDocument();
+
     expect(mockNotFound).not.toHaveBeenCalled();
   });
 
@@ -69,7 +90,7 @@ describe("Public Store Page ([slug])", () => {
     try {
       await PublicStorePage({ params });
     } catch (e) {
-      // O notFound lança um erro interno no Next.js, apanhamos aqui
+      // O notFound lança um erro interno, ignoramos no teste
     }
 
     // Verificação
