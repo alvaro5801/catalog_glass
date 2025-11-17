@@ -15,7 +15,12 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
       variants={variants}
       initial="hidden"
       animate="enter"
-      transition={{ ease: "easeInOut", duration: 0.5 }} // Define a suavidade e duração
+      transition={{ ease: "easeInOut", duration: 0.5 }}
+      
+      // ✅ CORREÇÃO PRINCIPAL: Adicionar 'relative z-0'
+      // Isto força todo o conteúdo da página a ficar na camada "0",
+      // atrás do cabeçalho (que agora está na camada "30").
+      className="relative z-0"
     >
       {children}
     </motion.div>

@@ -13,6 +13,9 @@ import Image from "next/image";
 import type { Product as PrismaProduct, Category as PrismaCategory, Specification, PriceTier } from "@prisma/client";
 import { upload } from '@vercel/blob/client'; 
 
+// 1. Importar o nosso NOVO cabeçalho
+import AdminPageHeader from '../_components/admin-page-header';
+
 // --- Tipos de Dados ---
 
 type Category = PrismaCategory;
@@ -31,6 +34,7 @@ type ProductFormData = {
 };
 
 // --- Componente: Formulário do Produto (no Modal) ---
+// (Este componente interno não precisa de alterações)
 function ProductForm({ product, categories, onSave, onCancel }: { 
     product: ProductWithRelations | null, 
     categories: Category[], 
@@ -346,10 +350,17 @@ export default function ProductsPage() {
 
     return (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">Gestão de Produtos</h2>
-                <Button onClick={handleAddNewClick}><PlusCircle className="mr-2 h-4 w-4" />Adicionar Produto</Button>
-            </div>
+            
+            {/* 2. SUBSTITUIR o <div className="flex..."> pelo novo componente */}
+            {/* Passamos o botão "Adicionar Produto" como 'children' (para o lado direito) */}
+            <AdminPageHeader title="Gestão de Produtos">
+              <Button onClick={handleAddNewClick}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Adicionar Produto
+              </Button>
+            </AdminPageHeader>
+
+            {/* 3. O resto do código (tabela, etc.) permanece igual */}
             <div className="rounded-lg border bg-card">
                 <Table>
                     <TableHeader>

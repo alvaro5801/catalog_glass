@@ -2,7 +2,7 @@
 import { Sidebar, NavContent } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Store } from "lucide-react"; // ✅ Mudei o ícone para 'Store' (Loja)
+import { Menu, Store } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminLayout({
@@ -15,7 +15,8 @@ export default function AdminLayout({
       <Sidebar />
 
       <div className="flex flex-col w-full">
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b bg-background px-6">
+        {/* ✅ MUDANÇA 1: Aumentamos o z-index de z-10 para z-30 */}
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background px-6">
           
           <div className="flex items-center gap-4">
             <div className="md:hidden">
@@ -34,7 +35,6 @@ export default function AdminLayout({
             <h1 className="text-xl font-semibold">Painel de Controlo</h1>
           </div>
 
-          {/* ✅ ALTERAÇÃO AQUI: O botão agora vai para /vitrine */}
           <Button asChild variant="outline" size="sm" className="hidden sm:flex">
             <Link href="/vitrine">
               <Store className="mr-2 h-4 w-4" />
@@ -50,7 +50,11 @@ export default function AdminLayout({
 
         </header>
 
-        <main className="flex-1 p-6 bg-muted/40">
+        {/* ✅ MUDANÇA 2: Adicionamos 'relative z-0'
+          Isto força todo o conteúdo da página a existir numa camada 
+          inferior (camada 0), atrás do header (camada 30).
+        */}
+        <main className="flex-1 p-6 bg-muted/40 relative z-0">
           {children}
         </main>
       </div>

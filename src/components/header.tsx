@@ -28,7 +28,8 @@ export function Header() {
   // Este cabeçalho aparece apenas na página de vendas/login
   if (pathname === '/') {
     return (
-      <header className="border-b sticky top-0 bg-white z-10">
+      // ✅ CORREÇÃO AQUI: z-10 alterado para z-30
+      <header className="border-b sticky top-0 bg-white z-30">
         <div className="container mx-auto px-4 h-24 flex items-center justify-between">
           
           {/* Logótipo à Esquerda */}
@@ -70,7 +71,8 @@ export function Header() {
   // --- CABEÇALHO PADRÃO (Vitrine / Catálogo / Admin) ---
   // Este cabeçalho aparece quando o utilizador já está a navegar na loja
   return (
-    <header className="border-b sticky top-0 bg-white z-10">
+    // ✅ CORREÇÃO AQUI: z-10 alterado para z-30
+    <header className="border-b sticky top-0 bg-white z-30">
       <div className="container mx-auto px-4 h-24 flex items-center justify-between overflow-hidden">
         
         {/* Logótipo aponta para a VITRINE para manter o utilizador na loja */}

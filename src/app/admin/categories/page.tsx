@@ -5,8 +5,11 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlusCircle, Trash2, Edit, Loader2, AlertCircle, CheckCircle } from "lucide-react";
+// 1. Importar o nosso novo cabeçalho reutilizável
+import AdminPageHeader from '../_components/admin-page-header';
 
 // 1. Componente para exibir mensagens de feedback (sucesso ou erro)
+// (Este componente permanece igual)
 function FeedbackMessage({ type, message }: { type: 'success' | 'error', message: string }) {
     const isSuccess = type === 'success';
     const Icon = isSuccess ? CheckCircle : AlertCircle;
@@ -30,10 +33,12 @@ export default function CategoriesPage() {
     const [editingText, setEditingText] = useState("");
     
     // 2. Estados para controlar o carregamento de ações e o feedback
+    // (Esta lógica permanece igual)
     const [loadingAction, setLoadingAction] = useState<{ action: 'add' | 'edit' | 'delete' | null, target: string | null }>({ action: null, target: null });
     const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
     // Efeito para limpar a mensagem de feedback após alguns segundos
+    // (Esta lógica permanece igual)
     useEffect(() => {
         if (feedback) {
             const timer = setTimeout(() => setFeedback(null), 4000);
@@ -42,6 +47,7 @@ export default function CategoriesPage() {
     }, [feedback]);
 
     // --- EFEITO PARA CARREGAR OS DADOS INICIAIS (GET) ---
+    // (Esta lógica permanece igual)
     useEffect(() => {
         const fetchCategories = async () => {
             setIsLoading(true);
@@ -73,6 +79,7 @@ export default function CategoriesPage() {
     }, []);
 
     // --- FUNÇÃO PARA ADICIONAR (POST) ---
+    // (Esta lógica permanece igual)
     const handleAddCategory = async () => {
         if (!newCategory) return;
         setLoadingAction({ action: 'add', target: null });
@@ -90,7 +97,6 @@ export default function CategoriesPage() {
             }
             
             const newCategoryData = await response.json();
-            // Aqui já estava correto (newCategoryData.name), mantemos assim
             setCategories(prev => [...prev, newCategoryData.name]); 
             setNewCategory("");
             setFeedback({ type: 'success', message: 'Categoria adicionada com sucesso!' });
@@ -104,6 +110,7 @@ export default function CategoriesPage() {
     };
 
     // --- FUNÇÃO PARA APAGAR (DELETE) ---
+    // (Esta lógica permanece igual)
     const handleDeleteCategory = async (categoryToDelete: string) => {
         setLoadingAction({ action: 'delete', target: categoryToDelete });
         setFeedback(null);
@@ -115,7 +122,6 @@ export default function CategoriesPage() {
             
             const updatedCategoriesList = await response.json();
             
-            // ✅ CORREÇÃO AQUI: Mapear objetos para strings
             const categoryNames = updatedCategoriesList.map((cat: { name: string }) => cat.name);
             setCategories(categoryNames); 
 
@@ -129,6 +135,7 @@ export default function CategoriesPage() {
     };
 
     // --- FUNÇÕES PARA EDITAR (PUT) ---
+    // (Esta lógica permanece igual)
     const handleEditStart = (categoryToEdit: string) => {
         setEditingCategory(categoryToEdit);
         setEditingText(categoryToEdit);
@@ -151,7 +158,6 @@ export default function CategoriesPage() {
 
             const updatedCategoriesList = await response.json();
             
-            // ✅ CORREÇÃO AQUI: Mapear objetos para strings
             const categoryNames = updatedCategoriesList.map((cat: { name: string }) => cat.name);
             setCategories(categoryNames);
 
@@ -170,14 +176,21 @@ export default function CategoriesPage() {
 
     return (
         <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Gestão de Categorias</h2>
+            
+            {/* 2. SUBSTITUIÇÃO: Trocamos o <h2> pelo nosso componente padronizado */}
+            {/* Para consistência, adicionamos o breadcrumb que nem as outras páginas */}
+            <AdminPageHeader title="Gestão de Categorias" breadcrumb="Categorias" />
             
             {feedback && <FeedbackMessage type={feedback.type} message={feedback.message} />}
 
+            {/* 3. O resto do conteúdo da página permanece igual */}
             <div className="p-6 border bg-card rounded-lg">
                 <h3 className="text-xl font-semibold mb-4">Adicionar Nova Categoria</h3>
                 <div className="flex gap-2 mb-8">
+                    
+                    {/* ✅ CORREÇÃO AQUI: (e.g. value) -> (e.target.value) */}
                     <Input placeholder="Nome da categoria" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} />
+                    
                     <Button onClick={handleAddCategory} disabled={loadingAction.action === 'add'}>
                         {loadingAction.action === 'add' ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
