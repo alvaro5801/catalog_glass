@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { FavoritesProvider } from "@/contexts/favorites-context";
 
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  variable: "--font-sans",
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Printa Copos - Catálogo de Copos Personalizados",
-  description: "Os melhores copos e taças personalizadas para o seu evento.",
+  title: "Catalogg - Crie seu Catálogo Digital",
+  description: "A forma mais simples de criar o seu catálogo online.",
 };
 
 export default function RootLayout({
@@ -19,9 +15,12 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Adicionei um log para confirmar se o layout está a carregar
+  console.log("🏗️ [RootLayout] A renderizar a aplicação...");
+
   return (
-    <html lang="pt-BR" className={`${poppins.variable} scroll-smooth`}>
-      <body className="min-h-screen flex flex-col font-sans antialiased">
+    <html lang="pt">
+      <body className={inter.className}>
         <FavoritesProvider>
           {children}
         </FavoritesProvider>

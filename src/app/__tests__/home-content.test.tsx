@@ -24,7 +24,6 @@ jest.mock('framer-motion', () => ({
 }));
 
 // 3. Simular o 'ProductCard'
-// ✅ CORREÇÃO AQUI: Usar o alias '@/'
 jest.mock('@/components/product-card', () => ({
   ProductCard: ({ product }: { product: { name: string } }) => (
     <div data-testid="mock-product-card">{product.name}</div>
@@ -32,7 +31,6 @@ jest.mock('@/components/product-card', () => ({
 }));
 
 // 4. Simular o 'Carousel'
-// ✅ CORREÇÃO AQUI: Usar o alias '@/'
 jest.mock('@/components/ui/carousel', () => ({
   Carousel: ({ children }: { children: React.ReactNode }) => <div data-testid="mock-carousel">{children}</div>,
   CarouselContent: ({ children }: { children: React.ReactNode }) => <div data-testid="mock-carousel-content">{children}</div>,
@@ -48,6 +46,8 @@ jest.mock('lucide-react', () => {
     ...original,
     GlassWater: () => <svg data-testid="icon-copo" />,
     Wine: () => <svg data-testid="icon-taca" />,
+    Coffee: () => <svg data-testid="icon-caneca" />, // Adicionei Caneca caso necessário
+    Heart: () => <svg data-testid="icon-heart" />, // Adicionei Heart para os favoritos
   };
 });
 
@@ -78,13 +78,13 @@ const mockFeaturedProducts: CardProductType[] = [
     id: 'p1', name: 'Copo de Destaque 1', slug: 'copo-1', images: ['/img1.jpg'], category: 'Copos',
     shortDescription: 'desc', description: 'desc long', 
     specifications: { material: 'Acrílico', capacidade: '300ml', dimensoes: '10cm' }, 
-    priceTable: [], priceInfo: 'info',
+    priceTable: [], priceInfo: 'info', isFeatured: true
   },
   {
     id: 'p2', name: 'Taça de Destaque 2', slug: 'taca-2', images: ['/img2.jpg'], category: 'Taças',
     shortDescription: 'desc', description: 'desc long', 
     specifications: { material: 'Vidro', capacidade: '500ml', dimensoes: '15cm' }, 
-    priceTable: [], priceInfo: 'info',
+    priceTable: [], priceInfo: 'info', isFeatured: true
   }
 ];
 
@@ -97,7 +97,8 @@ describe('HomeContent Component', () => {
   });
 
   it('deve renderizar o conteúdo estático (Hero, Como Funciona)', () => {
-    renderWithProvider(<HomeContent featuredProducts={[]} allCategories={[]} />);
+    // ✅ CORREÇÃO: Passamos allProducts como array vazio
+    renderWithProvider(<HomeContent featuredProducts={[]} allProducts={[]} allCategories={[]} />);
 
     // Verifica Hero
     expect(screen.getByRole('heading', { name: /Transforme Momentos em Memórias/i })).toBeInTheDocument();
@@ -109,6 +110,7 @@ describe('HomeContent Component', () => {
     renderWithProvider(
       <HomeContent 
         featuredProducts={mockFeaturedProducts} 
+        allProducts={mockFeaturedProducts} // ✅ CORREÇÃO: Passamos a lista completa
         allCategories={mockCategories} 
       />
     );
@@ -143,7 +145,8 @@ describe('HomeContent Component', () => {
   it('NÃO deve renderizar a secção "Produtos em Destaque" se a lista estiver vazia', () => {
     renderWithProvider(
       <HomeContent 
-        featuredProducts={[]} // Lista vazia
+        featuredProducts={[]} // Lista de destaques vazia
+        allProducts={mockFeaturedProducts} // A lista geral pode ter produtos, mas não importa se não houver destaques
         allCategories={mockCategories} 
       />
     );
@@ -153,6 +156,30 @@ describe('HomeContent Component', () => {
     
     // Verifica se NENHUM item de carrossel foi renderizado
     expect(screen.queryByTestId('mock-carousel-item')).not.toBeInTheDocument();
+  });
+
+  // ✅ NOVO TESTE: Verificar se a secção de Favoritos aparece
+  it('deve exibir a secção "Os Seus Favoritos" quando existem favoritos salvos no localStorage', () => {
+    // 1. Configurar o localStorage com um ID de favorito ('p1')
+    localStorage.setItem('favoriteProducts', JSON.stringify(['p1']));
+
+    renderWithProvider(
+      <HomeContent 
+        featuredProducts={[]} 
+        allProducts={mockFeaturedProducts} // A lista completa onde ele vai procurar o 'p1'
+        allCategories={mockCategories} 
+      />
+    );
+
+    // 2. Verificar se a secção apareceu
+    expect(screen.getByRole('heading', { name: /Os Seus Favoritos/i })).toBeInTheDocument();
+    
+    // 3. Verificar se APENAS o produto favorito ('p1') está visível nessa secção
+    // Nota: Como 'featuredProducts' está vazio, se o 'Copo de Destaque 1' aparecer, só pode ser na secção de favoritos.
+    expect(screen.getByText('Copo de Destaque 1')).toBeInTheDocument();
+    
+    // O produto 'p2' (Taça) não está nos favoritos, não deve aparecer
+    expect(screen.queryByText('Taça de Destaque 2')).not.toBeInTheDocument();
   });
 
 });

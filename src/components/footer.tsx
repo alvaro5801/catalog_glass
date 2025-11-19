@@ -11,7 +11,7 @@ export function Footer() {
       <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col md:flex-row items-center justify-between">
           <p className="text-sm text-muted-foreground text-center md:text-left">
-            © {currentYear} Printa Copos. Todos os direitos reservados.
+            © {currentYear} Catalogg. Todos os direitos reservados.
           </p>
 
           <div className="flex items-center gap-4 mt-4 md:mt-0">

@@ -5,7 +5,6 @@ import React, { createContext, useState, useEffect, useCallback, useContext, Rea
 
 const FAVORITES_KEY = 'favoriteProducts';
 
-// A interface agora trabalha com 'string'
 interface FavoritesContextType {
   favorites: string[];
   toggleFavorite: (productId: string) => void;
@@ -14,31 +13,40 @@ interface FavoritesContextType {
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
-  // O estado agora é um array de strings
   const [favorites, setFavorites] = useState<string[]>([]);
 
+  // 1. Carregar ao iniciar
   useEffect(() => {
     try {
       const storedFavorites = localStorage.getItem(FAVORITES_KEY);
       if (storedFavorites) {
-        setFavorites(JSON.parse(storedFavorites));
+        const parsed = JSON.parse(storedFavorites);
+        console.log("📂 Favoritos carregados do disco:", parsed);
+        setFavorites(parsed);
+      } else {
+        console.log("📂 Nenhum favorito encontrado no disco.");
       }
     } catch (error) {
-      console.error("Não foi possível ler os favoritos do localStorage", error);
+      console.error("Erro ao ler favoritos:", error);
     }
   }, []);
 
-  // O tipo do parâmetro é 'string[]'
+  // 2. Função para salvar
   const saveFavorites = (items: string[]) => {
     try {
+      console.log("💾 A salvar favoritos:", items);
       localStorage.setItem(FAVORITES_KEY, JSON.stringify(items));
     } catch (error) {
-      console.error("Não foi possível guardar os favoritos no localStorage", error);
+      console.error("Erro ao salvar favoritos:", error);
     }
   };
 
-  // O tipo do productId é 'string'
   const toggleFavorite = useCallback((productId: string) => {
+    if (!productId) {
+      console.error("❌ Erro: ID do produto inválido/vazio!");
+      return;
+    }
+
     setFavorites(prevFavorites => {
       const isFavorite = prevFavorites.includes(productId);
       const newFavorites = isFavorite

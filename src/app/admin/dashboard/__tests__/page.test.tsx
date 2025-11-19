@@ -28,13 +28,11 @@ jest.mock('@/domain/repositories/CategoryRepository', () => ({
   CategoryRepository: jest.fn(),
 }));
 
-// 2. MOCK DO AUTH HELPER
 jest.mock('@/lib/auth-helper', () => ({
   getAuthenticatedUser: jest.fn(),
   getUserCatalogId: jest.fn(),
 }));
 
-// ✅ 3. NOVO: MOCK DO PRISMA (Necessário porque adicionámos a busca do slug)
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     catalog: {
@@ -43,14 +41,12 @@ jest.mock('@/lib/prisma', () => ({
   },
 }));
 
-// --- IMPORTAR MOCKS ---
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// ✅ CORREÇÃO: Removemos os comentários de eslint-disable que não eram usados
 const { ProductService } = jest.requireMock('@/domain/services/ProductService');
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const { CategoryService } = jest.requireMock('@/domain/services/CategoryService');
 
 import { getAuthenticatedUser, getUserCatalogId } from '@/lib/auth-helper';
-import { prisma } from '@/lib/prisma'; // Importar a referência do prisma mockado
+import { prisma } from '@/lib/prisma';
 
 // --- DADOS DE TESTE ---
 const mockProducts = [
@@ -78,7 +74,6 @@ describe('DashboardPage', () => {
     (getAuthenticatedUser as jest.Mock).mockResolvedValue({ email: 'admin@teste.com' });
     (getUserCatalogId as jest.Mock).mockResolvedValue('catalog_123');
 
-    // ✅ Configurar o retorno do Prisma para o Slug
     (prisma.catalog.findUnique as jest.Mock).mockResolvedValue({ slug: 'minha-loja-teste' });
   });
 
@@ -86,18 +81,15 @@ describe('DashboardPage', () => {
     const ui = await DashboardPage();
     render(ui);
 
-    // Verificar Cartões de Estatísticas
     expect(screen.getByText('Total de Produtos')).toBeInTheDocument();
     expect(screen.getByText('Total de Categorias')).toBeInTheDocument();
 
     const countElements = screen.getAllByText('2');
     expect(countElements.length).toBeGreaterThanOrEqual(2);
 
-    // Verificar Tabela de Produtos Recentes
     expect(screen.getByText('Copo A')).toBeInTheDocument();
     expect(screen.getByText('Vidro')).toBeInTheDocument();
     
-    // ✅ Verificar se o link para a loja foi gerado corretamente
     const storeLink = screen.getByRole('link', { name: /Ver o meu Catálogo/i });
     expect(storeLink).toHaveAttribute('href', '/minha-loja-teste');
   });
@@ -113,7 +105,6 @@ describe('DashboardPage', () => {
     const ui = await DashboardPage();
     render(ui);
 
-    // Pode haver vários '0' na página, verifica se pelo menos 2 (dos cartões) existem
     const zeros = screen.getAllByText('0');
     expect(zeros.length).toBeGreaterThanOrEqual(2); 
     expect(screen.getByText(/Ainda não tem produtos/i)).toBeInTheDocument();

@@ -28,13 +28,12 @@ export function Header() {
   // Este cabeçalho aparece apenas na página de vendas/login
   if (pathname === '/') {
     return (
-      // ✅ CORREÇÃO AQUI: z-10 alterado para z-30
       <header className="border-b sticky top-0 bg-white z-30">
         <div className="container mx-auto px-4 h-24 flex items-center justify-between">
           
           {/* Logótipo à Esquerda */}
           <Link href="/" className="text-2xl font-bold text-gray-800">
-            Printa Copos
+           Catalogg
           </Link>
 
           {/* --- NAV PARA DESKTOP --- */}
@@ -71,24 +70,28 @@ export function Header() {
   // --- CABEÇALHO PADRÃO (Vitrine / Catálogo / Admin) ---
   // Este cabeçalho aparece quando o utilizador já está a navegar na loja
   return (
-    // ✅ CORREÇÃO AQUI: z-10 alterado para z-30
     <header className="border-b sticky top-0 bg-white z-30">
       <div className="container mx-auto px-4 h-24 flex items-center justify-between overflow-hidden">
         
         {/* Logótipo aponta para a VITRINE para manter o utilizador na loja */}
         <Link href="/vitrine" className="flex items-center gap-2">
-          <Image src="/logo.jpg" alt="Logótipo Printa Copos" width={234} height={98} className="h-32 w-auto" />
+          {/* ✅ CORREÇÃO AQUI: Atualizei o alt para "Logótipo Catalogg" para passar no teste */}
+          <Image 
+            src="/logo.jpg" 
+            alt="Logótipo Catalogg" 
+            width={234} 
+            height={98} 
+            className="h-32 w-auto" 
+          />
         </Link>
         
         <nav className="flex items-center gap-4 text-base font-medium">
-          {/* ✅ ALTERAÇÃO: 'Início' vai para '/vitrine' (a home da loja) */}
           <Link href="/vitrine" className="text-muted-foreground hover:text-primary transition-colors">Início</Link>
           
           <Link href="/catalogo" className="text-muted-foreground hover:text-primary transition-colors">Catálogo</Link>
           
           <Button asChild><Link href="/admin/dashboard">Painel</Link></Button>
           
-          {/* 'Sair' vai para '/' (a landing page do SaaS) */}
           <Button variant="outline" asChild><Link href="/">Sair</Link></Button>
         </nav>
       </div>

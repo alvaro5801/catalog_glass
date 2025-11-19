@@ -1,34 +1,39 @@
 // src/app/home-content.tsx
-"use client"; // ✅ --- CORREÇÃO: Adiciona a diretiva de cliente
+"use client";
 
-// Todas as importações de cliente vêm para aqui
 import Link from "next/link";
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from "framer-motion";
 import { ProductCard } from "../components/product-card";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "../components/ui/carousel";
 import { Button } from "../components/ui/button";
-import { Search, PenSquare, MessageCircle, GlassWater, Wine, Coffee } from "lucide-react";
+import { Search, PenSquare, MessageCircle, GlassWater, Wine, Coffee, Heart } from "lucide-react";
+import { useFavorites } from "@/hooks/useFavorites";
 
-// Importar os Tipos
 import type { Category } from '@prisma/client';
 import type { Product as CardProductType } from "@/lib/types";
 
-// Interface para as "props" que vamos receber do Server Component
 interface HomeContentProps {
   featuredProducts: CardProductType[];
+  allProducts: CardProductType[];
   allCategories: Category[];
 }
 
-export function HomeContent({ featuredProducts, allCategories }: HomeContentProps) {
+export function HomeContent({ featuredProducts, allProducts = [], allCategories }: HomeContentProps) {
+  const { favorites } = useFavorites();
   
-  // A lógica de ícones (que é estática) pode ficar aqui
+  const favoriteProducts = useMemo(() => {
+    if (!allProducts || allProducts.length === 0) return [];
+    return allProducts.filter(p => favorites.includes(p.id));
+  }, [favorites, allProducts]);
+
   const categoryIcons: { [key: string]: React.ElementType } = {
     Copos: GlassWater,
     Taças: Wine,
     Canecas: Coffee,
     Squeezes: GlassWater,
   };
+  
   const categoryHoverColors: { [key: string]: string } = {
     Copos: 'group-hover:text-sky-500',
     Taças: 'group-hover:text-red-500',
@@ -38,7 +43,7 @@ export function HomeContent({ featuredProducts, allCategories }: HomeContentProp
 
   return (
     <>
-      {/* Secção 1: Banner Principal (com motion) */}
+      {/* Secção 1: Banner Principal */}
       <section className="relative h-screen w-full overflow-hidden">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="relative z-10 flex h-full flex-col items-center justify-center text-center text-white">
           <div className="max-w-3xl mx-auto px-4">
@@ -70,6 +75,42 @@ export function HomeContent({ featuredProducts, allCategories }: HomeContentProp
           </div>
         </div>
       </section>
+
+      {/* ✅ SECÇÃO: Os Seus Favoritos */}
+      {favoriteProducts.length > 0 && (
+        <section className="py-20 bg-red-50 border-y border-red-100">
+          <div className="container mx-auto px-4">
+            <div className="text-center max-w-2xl mx-auto mb-12">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <Heart className="h-8 w-8 text-red-500 fill-red-500 animate-pulse" />
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-800">Os Seus Favoritos</h2>
+              <p className="mt-2 text-gray-600">
+                Não perca de vista os produtos que amou. Peça um orçamento agora!
+              </p>
+            </div>
+
+            <Carousel opts={{ align: "start", loop: favoriteProducts.length > 3 }} className="w-full max-w-sm md:max-w-2xl lg:max-w-5xl mx-auto">
+              <CarouselContent>
+                {favoriteProducts.map((product) => (
+                  <CarouselItem key={product.id} className="sm:basis-1/2 lg:basis-1/4">
+                    <div className="p-1">
+                      <ProductCard product={product} />
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="hidden sm:inline-flex" />
+              <CarouselNext className="hidden sm:inline-flex" />
+            </Carousel>
+            
+            {/* ❌ BOTÃO REMOVIDO DAQUI 
+               O bloco <div className="mt-10 text-center">...</div> foi apagado.
+            */}
+            
+          </div>
+        </section>
+      )}
 
       {/* Secção 3: Produtos em Destaque */}
       {featuredProducts.length > 0 && (

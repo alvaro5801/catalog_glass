@@ -1,73 +1,128 @@
 // src/app/__tests__/page.test.tsx
+
+// ✅ CORREÇÃO: Adicionado eslint-disable
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+global.setImmediate = ((callback: (...args: any[]) => void, ...args: any[]) => {
+  return setTimeout(callback, 0, ...args);
+}) as unknown as typeof setImmediate;
+
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-
-// ✅ CORREÇÃO: Usar o alias '@' em vez de '../' resolve o erro de caminho
 import Home from '@/app/page'; 
+import type { Product as PrismaProduct, Category as PrismaCategory, Specification, PriceTier } from '@prisma/client';
 
-// 1. Mock do PageLayout
+// --- MOCKS ---
+const mockGetProducts = jest.fn();
+const mockGetAllCategories = jest.fn();
+
+jest.mock('@/domain/services/ProductService', () => ({
+  ProductService: jest.fn().mockImplementation(() => ({
+    getProducts: mockGetProducts,
+  })),
+}));
+jest.mock('@/domain/services/CategoryService', () => ({
+  CategoryService: jest.fn().mockImplementation(() => ({
+    getAllCategories: mockGetAllCategories,
+  })),
+}));
+
+jest.mock('@/domain/repositories/ProductRepository');
+jest.mock('@/domain/repositories/CategoryRepository');
+
+// Mock do Prisma para a Home
+jest.mock('@/lib/prisma', () => ({
+  prisma: {
+    catalog: {
+      findFirst: jest.fn(),
+    },
+  },
+}));
+import { prisma } from '@/lib/prisma';
+
 jest.mock('@/app/page-layout', () => {
-  return function MockPageLayout({ children }: { children: React.ReactNode }) {
-    return <div data-testid="page-layout">{children}</div>;
-  };
+  const MockPageLayout = ({ children }: { children: React.ReactNode }) => <div data-testid="page-layout">{children}</div>;
+  MockPageLayout.displayName = 'MockPageLayout';
+  return MockPageLayout;
 });
 
-// 2. Mock do next/link
+const mockHomeContent = jest.fn();
+jest.mock('@/app/home-content', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  HomeContent: (props: any) => {
+    mockHomeContent(props);
+    return <div data-testid="home-content" />;
+  },
+}));
+
 jest.mock('next/link', () => {
   // eslint-disable-next-line react/display-name
-  return ({ href, children }: { href: string, children: React.ReactNode }) => {
-    return <a href={href}>{children}</a>;
-  };
+  return ({ href, children }: { href: string, children: React.ReactNode }) => <a href={href}>{children}</a>;
 });
 
-describe('Home Page (SaaS Landing Page)', () => {
+// --- DADOS DE TESTE ---
+const EXPECTED_ID = 'demo_id';
 
-  it('deve renderizar a secção Hero com o título e o CTA principal', () => {
-    render(<Home />);
+const mockCategories: PrismaCategory[] = [
+  { id: 'c1', name: 'Copos', catalogId: EXPECTED_ID, createdAt: new Date(), updatedAt: new Date() },
+];
 
-    // Verifica o título principal (H1)
-    expect(screen.getByRole('heading', { 
-      name: /Crie um catálogo online profissional em menos de 5 minutos/i 
-    })).toBeInTheDocument();
+type ProductWithRelations = PrismaProduct & {
+  specifications: Specification | null;
+  priceTable: PriceTier[];
+};
 
-    // Verifica a descrição do Hero
-    expect(screen.getByText(/Diga adeus aos PDFs desatualizados/i)).toBeInTheDocument();
+const mockApiProducts: ProductWithRelations[] = [
+  {
+    id: 'p1',
+    slug: 'copo-1',
+    name: 'Copo 1',
+    images: ['/img.jpg'],
+    isFeatured: true,
+    categoryId: 'c1',
+    specifications: { id: 's1', material: 'Plástico', capacidade: '200ml', dimensoes: '10x10', productId: 'p1' },
+    priceTable: [{ id: 'pt1', quantity: '10', price: 5, productId: 'p1' }],
+    shortDescription: '',
+    description: '',
+    priceInfo: '',
+    catalogId: EXPECTED_ID,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+];
 
-    // Verifica o botão de CTA principal (Call to Action)
-    const ctaButton = screen.getByRole('link', { name: /Criar Meu Catálogo Grátis/i });
-    expect(ctaButton).toBeInTheDocument();
-    expect(ctaButton).toHaveAttribute('href', '/signup');
+const expectedFormattedProduct = {
+  id: 'p1',
+  slug: 'copo-1',
+  name: 'Copo 1',
+  images: ['/img.jpg'],
+  shortDescription: '',
+  description: '',
+  category: 'Copos',
+  specifications: { material: 'Plástico', capacidade: '200ml', dimensoes: '10x10' },
+  priceTable: [{ quantity: '10', price: 5 }],
+  priceInfo: '',
+  isFeatured: true,
+};
+
+describe('Home Page (Server Component)', () => {
+  
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetProducts.mockResolvedValue(mockApiProducts);
+    mockGetAllCategories.mockResolvedValue(mockCategories);
+    (prisma.catalog.findFirst as jest.Mock).mockResolvedValue({ id: EXPECTED_ID, slug: 'demo' });
   });
 
-  it('deve renderizar a secção de Prova Social', () => {
-    render(<Home />);
+  it('deve buscar dados e passar para o HomeContent', async () => {
+    const ui = await Home();
+    render(ui);
 
-    expect(screen.getByText(/Junte-se a centenas de empreendedores/i)).toBeInTheDocument();
-    // Verifica se alguns dos "Logos" falsos estão presentes
-    expect(screen.getByText('Doce Sabor Confeitaria')).toBeInTheDocument();
-    expect(screen.getByText('Ateliê Criativo')).toBeInTheDocument();
-  });
+    expect(mockHomeContent).toHaveBeenCalledWith({
+      featuredProducts: [expectedFormattedProduct],
+      allProducts: [expectedFormattedProduct], 
+      allCategories: mockCategories,
+    });
 
-  it('deve renderizar a secção de Funcionalidades', () => {
-    render(<Home />);
-
-    expect(screen.getByRole('heading', { name: /Tudo o que precisa para vender mais/i })).toBeInTheDocument();
-
-    // Verifica se os textos das funcionalidades estão presentes
-    expect(screen.getByText(/Editor Simples/i)).toBeInTheDocument();
-    expect(screen.getByText(/100% Responsivo/i)).toBeInTheDocument();
-    expect(screen.getByText(/WhatsApp Integrado/i)).toBeInTheDocument();
-    expect(screen.getByText(/Link Único/i)).toBeInTheDocument();
-  });
-
-  it('deve renderizar a chamada final para ação (Footer CTA)', () => {
-    render(<Home />);
-
-    expect(screen.getByRole('heading', { name: /Pronto para criar o seu catálogo\?/i })).toBeInTheDocument();
-    
-    // Verifica o botão final "Começar Agora"
-    const finalCta = screen.getByRole('link', { name: /Começar Agora/i });
-    expect(finalCta).toBeInTheDocument();
-    expect(finalCta).toHaveAttribute('href', '/signup');
+    expect(screen.getByTestId('page-layout')).toBeInTheDocument();
   });
 });
